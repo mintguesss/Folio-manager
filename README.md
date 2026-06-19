@@ -114,10 +114,3 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 Supabase anon key
 
 **iOS（Safari）**：底部分享按鈕 → 「加入主畫面」（必須用 Safari）
 
----
-
-## GitHub 協作
-
-邀請共同開發：Repo → **Settings → Collaborators → Invite**
-
-只是要用網站的朋友：直接給網址，到 `/login` 自行註冊。
