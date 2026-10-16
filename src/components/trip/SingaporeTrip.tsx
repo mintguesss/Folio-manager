@@ -66,17 +66,17 @@ function Day2Section() {
         離開環球，搭 <M q="Sentosa Express">聖淘沙捷運</M>或公車去{" "}
         <M q="Beach Station Sentosa">海灘站</M>（約 10–15 分）
       </TimedItem>
-      <TimedItem time="17:30">
-        到 <M q="Siloso Beach Sentosa">聖淘沙海灘</M>一帶，晚餐（
-        <M q="Coastes Sentosa">Coastes</M>，或其他也可，海邊整條有好幾家，可以的話先買代金券比較便宜）、海灘邊散步
-      </TimedItem>
-      <TimedItem time="19:30">
+      <TimedItem time="18:20">
         <M q="Skyline Luge Sentosa">滑道車 Skyline Luge</M> 取票（場次開始前 30 分鐘，憑 Trip.com 憑證，取票地點看憑證）
       </TimedItem>
-      <TimedItem time="20:00">
+      <TimedItem time="19:00">
         滑道車 3 趟（Trip.com 訂票 842，夜間 LED 滑道，週六營業到 21:00）
       </TimedItem>
       <TimedItem time="21:00">
+        到 <M q="Siloso Beach Sentosa">聖淘沙海灘</M>一帶，晚餐（
+        <M q="Coastes Sentosa">Coastes</M>，或其他也可，海邊整條有好幾家，代金券來不及買了）、海灘邊散步
+      </TimedItem>
+      <TimedItem time="22:00">
         聖淘沙捷運到 <M q="VivoCity">VivoCity</M>，轉捷運回{" "}
         <M q="Orchard Road">烏節路</M>（約 40 分，末班車時間出發前查）
       </TimedItem>
@@ -187,7 +187,7 @@ function FoodSection() {
         <>
           <LocHead>聖淘沙</LocHead>
           <div className="space-y-2.5 pt-1">
-            <Bullet><M q="Coastes Sentosa">Coastes</M>（海邊整條有好幾家，可先買代金券）</Bullet>
+            <Bullet><M q="Coastes Sentosa">Coastes</M>（海邊整條有好幾家）</Bullet>
           </div>
         </>
       )}
