@@ -126,7 +126,12 @@ src/
 │   │
 │   ├── SpendingClient.tsx        # 消費統計 + 對帳 client component
 │   │
-│   └── TripClient.tsx            # 行程 Day-by-Day client component（含第 N 天倒計時）
+│   ├── TripClient.tsx            # 行程切換：預設顯示目前行程，「以前行程」按鈕切到舊行程
+│   │
+│   └── trip/
+│       ├── shared.tsx            # 行程共用元件（連結、清單、DayHeader、TabBar、FilterPills）
+│       ├── SingaporeTrip.tsx     # 2026/10 新加坡行程（目前）
+│       └── JapanTrip.tsx         # 2026/05 日本東京行程（以前，含想日本第 N 天）
 │
 └── lib/                          # 共用邏輯/工具
     ├── stock-utils.ts            # 股價抓取（Yahoo Finance + TWSE）、匯率、同步
