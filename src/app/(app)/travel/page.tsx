@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { TravelEntryForm } from "@/components/TravelEntryForm";
 import { TravelSummaryAccordion } from "@/components/TravelSummaryAccordion";
 import { TravelExpenseList } from "@/components/TravelExpenseList";
-import { fetchJPYTWD } from "@/lib/stock-utils";
+import { fetchTravelFx } from "@/lib/stock-utils";
+import { addFx, toTravelCurrency, type FxBag, type TravelCurrency } from "@/lib/currency";
 import Link from "next/link";
 
 export default async function TravelPage({
@@ -12,32 +13,60 @@ export default async function TravelPage({
 }) {
   const { trip: tripFilter } = await searchParams;
 
-  const [supabase, jpyRate] = await Promise.all([createClient(), fetchJPYTWD()]);
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: expenses } = await supabase
-    .from("travel_expenses")
-    .select("id,trip_name,occurred_on,category,description,amount_jpy,exchange_rate,payment_method,created_at")
-    .eq("user_id", user?.id ?? "")
-    .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [{ data: rawExpenses }, { data: travelGroups }] = await Promise.all([
+    supabase
+      .from("travel_expenses")
+      .select("id,trip_name,occurred_on,category,description,amount_jpy,currency,exchange_rate,payment_method,created_at")
+      .eq("user_id", user?.id ?? "")
+      .order("occurred_on", { ascending: false })
+      .order("created_at", { ascending: false }),
+    // 出國分帳群組：名稱當行程名稱、帶出幣別
+    supabase
+      .from("split_groups")
+      .select("name,currency")
+      .eq("group_type", "travel")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const allTrips = Array.from(new Set((expenses ?? []).map((e) => e.trip_name))).sort();
+  const expenses = (rawExpenses ?? []).map((e) => ({ ...e, currency: toTravelCurrency(e.currency) }));
+
+  // 行程 → 幣別（記帳紀錄優先，其次是分帳群組設定）
+  const tripCurrencies: Record<string, TravelCurrency> = {};
+  for (const g of travelGroups ?? []) tripCurrencies[g.name] ??= toTravelCurrency(g.currency);
+  for (const e of [...expenses].reverse()) {
+    if (e.currency !== "TWD") tripCurrencies[e.trip_name] = e.currency;
+  }
+
+  const allTrips = Array.from(new Set(expenses.map((e) => e.trip_name))).sort();
+  const tripOptions = Array.from(
+    new Set([...allTrips, ...(travelGroups ?? []).map((g) => g.name)])
+  ).sort();
+
+  const defaultCurrency: TravelCurrency =
+    (tripFilter && tripCurrencies[tripFilter]) ||
+    (travelGroups?.[0] ? toTravelCurrency(travelGroups[0].currency) : undefined) ||
+    expenses.find((e) => e.currency !== "TWD")?.currency ||
+    "JPY";
+  const serverRate = await fetchTravelFx(defaultCurrency);
 
   const filtered = tripFilter
-    ? (expenses ?? []).filter((e) => e.trip_name === tripFilter)
-    : (expenses ?? []);
+    ? expenses.filter((e) => e.trip_name === tripFilter)
+    : expenses;
 
   // Category summary for filtered view
-  const categoryTotals: Record<string, { jpy: number; twd: number }> = {};
+  const categoryTotals: Record<string, { fx: FxBag; twd: number }> = {};
+  const totalFx: FxBag = {};
   for (const e of filtered) {
-    if (!categoryTotals[e.category]) categoryTotals[e.category] = { jpy: 0, twd: 0 };
-    categoryTotals[e.category].jpy += Number(e.amount_jpy);
+    if (!categoryTotals[e.category]) categoryTotals[e.category] = { fx: {}, twd: 0 };
+    addFx(categoryTotals[e.category].fx, e.currency, Number(e.amount_jpy));
     categoryTotals[e.category].twd += Math.round(Number(e.amount_jpy) * Number(e.exchange_rate));
+    addFx(totalFx, e.currency, Number(e.amount_jpy));
   }
-  const totalJpy = filtered.reduce((s, e) => s + Number(e.amount_jpy), 0);
   const totalTwd = filtered.reduce(
     (s, e) => s + Math.round(Number(e.amount_jpy) * Number(e.exchange_rate)),
     0
@@ -64,9 +93,11 @@ export default async function TravelPage({
 
       {/* Entry form */}
       <TravelEntryForm
-        rate={jpyRate}
-        existingTrips={allTrips}
+        rate={serverRate}
+        existingTrips={tripOptions}
+        tripCurrencies={tripCurrencies}
         defaultTrip={tripFilter}
+        defaultCurrency={defaultCurrency}
       />
 
       {/* Trip filter tabs */}
@@ -104,7 +135,7 @@ export default async function TravelPage({
       {filtered.length > 0 && (
         <TravelSummaryAccordion
           categoryTotals={categoryTotals}
-          totalJpy={totalJpy}
+          totalFx={totalFx}
           totalTwd={totalTwd}
           count={filtered.length}
         />

@@ -3,11 +3,13 @@
 import { useState, useMemo, useCallback } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { SplitShare, SplitExpense } from "@/app/(app)/spending/page";
+import { addFx, fmtFxBag, fxBagOf, toTravelCurrency, type FxBag } from "@/lib/currency";
 
 type TravelExpense = {
   id: string;
   occurred_on: string;
   amount_jpy: number;
+  currency: string | null;
   exchange_rate: number | null;
   payment_method: string | null;
   category: string | null;
@@ -19,7 +21,7 @@ type UnifiedExpense = {
   id: string;
   date: string;
   my_share_twd: number;
-  my_share_jpy: number;
+  my_share_fx: FxBag;
   total_paid_twd: number;
   source: "travel" | "split";
   category: string;
@@ -36,8 +38,11 @@ const COLORS = ["#fb7185","#38bdf8","#34d399","#a78bfa","#fbbf24","#f97316","#e8
 const fmt = (n: number) =>
   new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(n);
 
-const fmtJPY = (n: number) =>
-  new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 0 }).format(n);
+/** 合併多個外幣加總 */
+const mergeFx = (into: FxBag, from: FxBag): FxBag => {
+  for (const [c, n] of Object.entries(from)) addFx(into, toTravelCurrency(c), n);
+  return into;
+};
 
 function normalize(
   travelExpenses: TravelExpense[],
@@ -65,7 +70,7 @@ function normalize(
       id: `t-${e.id}`,
       date: e.occurred_on,
       my_share_twd: twd,
-      my_share_jpy: Number(e.amount_jpy),
+      my_share_fx: fxBagOf(toTravelCurrency(e.currency), Number(e.amount_jpy)),
       total_paid_twd: twd,
       source: "travel",
       category: e.category?.trim() || "其他",
@@ -84,22 +89,22 @@ function normalize(
     if (userShares.length === 0) continue; // user has no stake in this expense
 
     const rate = Number(exp.exchange_rate ?? 0.217);
-    const toTWD = (amt: number) => (exp.currency === "JPY" ? amt * rate : amt);
+    const toTWD = (amt: number) => (exp.currency !== "TWD" ? amt * rate : amt);
 
     const my_share_twd = userShares.reduce((sum, s) => sum + toTWD(Number(s.share_amount)), 0);
     const is_payer = memberIdSet.has(exp.paid_by);
     const total_paid_twd = is_payer ? toTWD(Number(exp.amount)) : my_share_twd;
     const is_uploaded = uploadedSplitIds.has(exp.id);
 
-    const my_share_jpy = exp.currency === "JPY"
-      ? userShares.reduce((sum, s) => sum + Number(s.share_amount), 0)
-      : 0;
+    const my_share_fx: FxBag = exp.currency !== "TWD"
+      ? { [toTravelCurrency(exp.currency)]: userShares.reduce((sum, s) => sum + Number(s.share_amount), 0) }
+      : {};
     const is_settled = userShares.every((s) => s.is_settled);
     result.push({
       id: `s-${userShares[0].id}`,
       date: exp.expense_date,
       my_share_twd,
-      my_share_jpy,
+      my_share_fx,
       total_paid_twd,
       source: "split",
       category: (exp.category || exp.category_text)?.trim() || "其他",
@@ -250,7 +255,7 @@ function DetailList({ entries }: { entries: UnifiedExpense[] }) {
 type ReconcileEntry = {
   id: string; date: string; description: string; pm: string;
   amount: number; my: number; forOthers: number; source: "travel" | "split";
-  amount_jpy: number; my_jpy: number;
+  amount_fx: FxBag; my_fx: FxBag;
 };
 
 function ReconcileList({ entries }: { entries: ReconcileEntry[] }) {
@@ -279,7 +284,7 @@ function ReconcileList({ entries }: { entries: ReconcileEntry[] }) {
       {grouped.map(([date, dateEntries], gi) => {
         const isCollapsed = collapsedDates.has(date);
         const dayTotal = dateEntries.reduce((s, e) => s + e.amount, 0);
-        const dayTotalJPY = dateEntries.reduce((s, e) => s + e.amount_jpy, 0);
+        const dayTotalFx = fmtFxBag(dateEntries.reduce<FxBag>((bag, e) => mergeFx(bag, e.amount_fx), {}));
         return (
           <div key={date} className={gi > 0 ? "border-t border-white/5" : ""}>
             <button
@@ -290,7 +295,7 @@ function ReconcileList({ entries }: { entries: ReconcileEntry[] }) {
               <span className="flex-1 text-sm font-semibold text-zinc-200">{date}</span>
               <div className="text-right">
                 <p className="tabular-nums text-sm font-medium text-rose-300">-{fmt(dayTotal)}</p>
-                {dayTotalJPY > 0.5 && <p className="tabular-nums text-xs text-zinc-600">¥{fmtJPY(dayTotalJPY)}</p>}
+                {dayTotalFx && <p className="tabular-nums text-xs text-zinc-600">{dayTotalFx}</p>}
               </div>
               <span className="text-xs text-zinc-400">{dateEntries.length} 筆</span>
               <svg
@@ -324,7 +329,7 @@ function ReconcileList({ entries }: { entries: ReconcileEntry[] }) {
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="tabular-nums text-sm font-semibold text-rose-300">-{fmt(e.amount)}</p>
-                        {e.amount_jpy > 0.5 && <p className="tabular-nums text-xs text-zinc-600">¥{fmtJPY(e.amount_jpy)}</p>}
+                        {fmtFxBag(e.amount_fx) && <p className="tabular-nums text-xs text-zinc-600">{fmtFxBag(e.amount_fx)}</p>}
                       </div>
                     </div>
                   </div>
@@ -396,7 +401,7 @@ export function SpendingClient({
       const pm = e.payment_method?.trim() || "其他";
       const rate = Number(e.exchange_rate ?? 0.217);
       const amount = Number(e.amount_jpy) * rate;
-      result.push({ id: `t-${e.id}`, date: e.occurred_on, description: e.description?.trim() || e.category?.trim() || "支出", pm, amount, my: amount, forOthers: 0, source: "travel", amount_jpy: Number(e.amount_jpy), my_jpy: Number(e.amount_jpy) });
+      result.push({ id: `t-${e.id}`, date: e.occurred_on, description: e.description?.trim() || e.category?.trim() || "支出", pm, amount, my: amount, forOthers: 0, source: "travel", amount_fx: fxBagOf(toTravelCurrency(e.currency), Number(e.amount_jpy)), my_fx: fxBagOf(toTravelCurrency(e.currency), Number(e.amount_jpy)) });
     }
     for (const exp of splitExpenses) {
       if (!memberIdSet.has(exp.paid_by)) continue;
@@ -404,13 +409,14 @@ export function SpendingClient({
       const shares = sharesByExpId.get(exp.id) ?? [];
       const userShares = shares.filter(s => memberIdSet.has(s.member_id));
       const rate = Number(exp.exchange_rate ?? 0.217);
-      const toTWD = (amt: number) => exp.currency === "JPY" ? amt * rate : amt;
+      const toTWD = (amt: number) => exp.currency !== "TWD" ? amt * rate : amt;
       const my = userShares.reduce((sum, s) => sum + toTWD(Number(s.share_amount)), 0);
       const total = toTWD(Number(exp.amount));
-      const isJpy = exp.currency === "JPY";
-      const amount_jpy = isJpy ? Number(exp.amount) : 0;
-      const my_jpy = isJpy ? userShares.reduce((sum, s) => sum + Number(s.share_amount), 0) : 0;
-      result.push({ id: `s-${exp.id}`, date: exp.expense_date, description: exp.description?.trim() || "分帳支出", pm, amount: total, my, forOthers: total - my, source: "split", amount_jpy, my_jpy });
+      const isFx = exp.currency !== "TWD";
+      const cur = toTravelCurrency(exp.currency);
+      const amount_fx: FxBag = isFx ? { [cur]: Number(exp.amount) } : {};
+      const my_fx: FxBag = isFx ? { [cur]: userShares.reduce((sum, s) => sum + Number(s.share_amount), 0) } : {};
+      result.push({ id: `s-${exp.id}`, date: exp.expense_date, description: exp.description?.trim() || "分帳支出", pm, amount: total, my, forOthers: total - my, source: "split", amount_fx, my_fx });
     }
     return result.sort((a, b) => b.date.localeCompare(a.date));
   }, [isOwner, travelExpenses, splitExpenses, splitShares, memberIds]);
@@ -424,11 +430,11 @@ export function SpendingClient({
   );
 
   const reconcileSummary = useMemo(() => {
-    const m = new Map<string, { amount: number; my: number; forOthers: number; amount_jpy: number; my_jpy: number }>();
+    const m = new Map<string, { amount: number; my: number; forOthers: number; amount_fx: FxBag; my_fx: FxBag }>();
     for (const e of filteredReconcile) {
-      const row = m.get(e.pm) ?? { amount: 0, my: 0, forOthers: 0, amount_jpy: 0, my_jpy: 0 };
+      const row = m.get(e.pm) ?? { amount: 0, my: 0, forOthers: 0, amount_fx: {}, my_fx: {} };
       row.amount += e.amount; row.my += e.my; row.forOthers += e.forOthers;
-      row.amount_jpy += e.amount_jpy; row.my_jpy += e.my_jpy;
+      mergeFx(row.amount_fx, e.amount_fx); mergeFx(row.my_fx, e.my_fx);
       m.set(e.pm, row);
     }
     return Array.from(m.entries()).map(([pm, v]) => ({ pm, ...v })).sort((a, b) => b.amount - a.amount);
@@ -461,8 +467,8 @@ export function SpendingClient({
     [filtered, excludeUploaded]
   );
 
-  const totalMyJPY = useMemo(
-    () => filtered.filter(e => !excludeUploaded || !e.is_uploaded).reduce((s, e) => s + e.my_share_jpy, 0),
+  const totalMyFx = useMemo(
+    () => fmtFxBag(filtered.filter(e => !excludeUploaded || !e.is_uploaded).reduce<FxBag>((bag, e) => mergeFx(bag, e.my_share_fx), {})),
     [filtered, excludeUploaded]
   );
 
@@ -498,7 +504,7 @@ export function SpendingClient({
       if (!memberIdSet.has(exp.paid_by)) continue; // user is not payer
 
       const rate = Number(exp.exchange_rate ?? 0.217);
-      const toTWD = (amt: number) => (exp.currency === "JPY" ? amt * rate : amt);
+      const toTWD = (amt: number) => (exp.currency !== "TWD" ? amt * rate : amt);
       const my = userShares.reduce((sum, s) => sum + toTWD(Number(s.share_amount)), 0);
       const total = toTWD(Number(exp.amount));
       const forOthers = total - my;
@@ -597,7 +603,7 @@ export function SpendingClient({
               <p className="mt-0.5 text-xs tabular-nums text-zinc-500">
                 {fmt(totalMy)} TWD · {filtered.length} 筆{source === "split" ? "（含已上傳）" : ""}
               </p>
-              {totalMyJPY > 0 && <p className="text-xs tabular-nums text-zinc-600">¥{fmtJPY(totalMyJPY)}</p>}
+              {totalMyFx && <p className="text-xs tabular-nums text-zinc-600">{totalMyFx}</p>}
             </div>
             {source === "split" ? (
               <>
@@ -723,11 +729,11 @@ export function SpendingClient({
                       <span className="text-sm font-semibold text-zinc-200">{row.pm}</span>
                       <div className="text-right">
                         <p className="tabular-nums text-sm font-bold text-rose-300">合計 {fmt(row.amount)}</p>
-                        {row.amount_jpy > 0.5 && <p className="tabular-nums text-xs text-zinc-500">¥{fmtJPY(row.amount_jpy)}</p>}
+                        {fmtFxBag(row.amount_fx) && <p className="tabular-nums text-xs text-zinc-500">{fmtFxBag(row.amount_fx)}</p>}
                       </div>
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-500">
-                      <span>自己 <span className="tabular-nums text-sky-300">{fmt(row.my)}</span>{row.my_jpy > 0.5 && <span className="ml-1 text-zinc-600">¥{fmtJPY(row.my_jpy)}</span>}</span>
+                      <span>自己 <span className="tabular-nums text-sky-300">{fmt(row.my)}</span>{fmtFxBag(row.my_fx) && <span className="ml-1 text-zinc-600">{fmtFxBag(row.my_fx)}</span>}</span>
                       {row.forOthers > 0.5 && (
                         <span>代墊 <span className="tabular-nums text-amber-300">{fmt(row.forOthers)}</span></span>
                       )}

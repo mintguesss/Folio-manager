@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SettlementModal } from "@/components/SettlementModal";
 import { SplitExpenseListClient } from "@/components/SplitExpenseListClient";
+import { fmtFx, toTravelCurrency } from "@/lib/currency";
 
 function fmt(n: number, dp = 0) {
   return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: dp }).format(n);
@@ -22,7 +23,7 @@ export default async function SplitGroupPage({
   // Allow both owner and members (RLS enforces access)
   const { data: group } = await supabase
     .from("split_groups")
-    .select("id, name, group_type, description, user_id")
+    .select("id, name, group_type, currency, description, user_id")
     .eq("id", id)
     .single();
 
@@ -91,28 +92,29 @@ export default async function SplitGroupPage({
     sharesByExpense.get(s.expense_id)!.push(s);
   }
 
-  // Unsettled debts grouped by (debtor, creditor)
-  const debtMap = new Map<string, { jpy: number; twd: number }>();
+  // Unsettled debts grouped by (debtor, creditor)；外幣金額以群組幣別計
+  const groupCurrency = toTravelCurrency(group.currency);
+  const debtMap = new Map<string, { fx: number; twd: number }>();
   for (const e of expenses ?? []) {
     const rate = e.exchange_rate ? Number(e.exchange_rate) : null;
-    const isJpy = e.currency === "JPY";
+    const isFx = e.currency !== "TWD";
     for (const s of sharesByExpense.get(e.id) ?? []) {
       if (s.is_settled || s.member_id === e.paid_by) continue;
       const k = `${s.member_id}:${e.paid_by}`;
-      const prev = debtMap.get(k) ?? { jpy: 0, twd: 0 };
+      const prev = debtMap.get(k) ?? { fx: 0, twd: 0 };
       const amt = Number(s.share_amount);
-      debtMap.set(k, isJpy
-        ? { jpy: prev.jpy + amt, twd: prev.twd + (rate ? Math.round(amt * rate) : 0) }
-        : { jpy: prev.jpy, twd: prev.twd + amt }
+      debtMap.set(k, isFx
+        ? { fx: prev.fx + amt, twd: prev.twd + (rate ? Math.round(amt * rate) : 0) }
+        : { fx: prev.fx, twd: prev.twd + amt }
       );
     }
   }
   const debts = Array.from(debtMap.entries())
-    .map(([k, { jpy, twd }]) => {
+    .map(([k, { fx, twd }]) => {
       const [debtor_id, creditor_id] = k.split(":");
-      return { debtor_id, creditor_id, jpy, twd };
+      return { debtor_id, creditor_id, fx, twd };
     })
-    .filter((d) => d.jpy > 0.005 || d.twd > 0.005);
+    .filter((d) => d.fx > 0.005 || d.twd > 0.005);
 
   const typeLabel = group.group_type === "travel" ? "出國" : "一般";
 
@@ -175,6 +177,7 @@ export default async function SplitGroupPage({
               members={(members ?? []).map((m) => ({ id: m.id, name: m.name }))}
               groupId={id}
               selfMemberId={selfMemberId}
+              currency={groupCurrency}
             />
           </div>
           <div className="space-y-2">
@@ -199,9 +202,9 @@ export default async function SplitGroupPage({
                         {fmt(d.twd)} <span className="text-xs font-normal text-rose-400/60">TWD</span>
                       </div>
                     )}
-                    {d.jpy > 0 && (
+                    {d.fx > 0 && (
                       <div className={["tabular-nums text-xs", d.twd > 0 ? "text-zinc-500" : "font-semibold text-rose-300"].join(" ")}>
-                        ¥{fmt(d.jpy)}
+                        {fmtFx(d.fx, groupCurrency)}
                       </div>
                     )}
                   </div>

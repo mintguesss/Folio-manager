@@ -12,7 +12,7 @@ export default async function SpendingPage() {
   const [{ data: travelExpenses }, { data: userGroupLinks }] = await Promise.all([
     supabase
       .from("travel_expenses")
-      .select("id,occurred_on,amount_jpy,exchange_rate,payment_method,category,description,split_expense_id")
+      .select("id,occurred_on,amount_jpy,currency,exchange_rate,payment_method,category,description,split_expense_id")
       .eq("user_id", user.id),
     supabase
       .from("split_group_users")

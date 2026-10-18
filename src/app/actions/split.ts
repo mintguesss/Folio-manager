@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { GROUP_CURRENCIES } from "@/lib/currency";
 
 // ── Update Group ──────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ const UpdateGroupMemberItem = z.object({
 const UpdateGroupSchema = z.object({
   name: z.string().min(1).transform((s) => s.trim()),
   group_type: z.enum(["general", "travel"]),
+  currency: z.enum(GROUP_CURRENCIES).catch("JPY"),
   description: z.string().optional().transform((s) => s?.trim() || null),
   members_json: z.string().transform((s) => {
     const arr = JSON.parse(s) as unknown[];
@@ -36,16 +38,17 @@ export async function updateSplitGroup(formData: FormData) {
   const parsed = UpdateGroupSchema.safeParse({
     name: formData.get("name"),
     group_type: formData.get("group_type"),
+    currency: formData.get("currency"),
     description: formData.get("description"),
     members_json: formData.get("members_json"),
   });
   if (!parsed.success) return { ok: false as const, message: "輸入格式不正確。" };
 
-  const { name, group_type, description, members_json } = parsed.data;
+  const { name, group_type, currency, description, members_json } = parsed.data;
 
   const { error: groupError } = await supabase
     .from("split_groups")
-    .update({ name, group_type, description })
+    .update({ name, group_type, currency, description })
     .eq("id", groupId)
     .eq("user_id", user.id);
   if (groupError) return { ok: false as const, message: groupError.message };
@@ -88,6 +91,7 @@ export async function updateSplitGroup(formData: FormData) {
 const GroupSchema = z.object({
   name: z.string().min(1).transform((s) => s.trim()),
   group_type: z.enum(["general", "travel"]),
+  currency: z.enum(GROUP_CURRENCIES).catch("JPY"),
   description: z.string().optional().transform((s) => s?.trim() || null),
   members_json: z.string().transform((s) => {
     const arr = JSON.parse(s) as { name: string; is_self: boolean }[];
@@ -105,16 +109,17 @@ export async function createSplitGroup(formData: FormData) {
   const parsed = GroupSchema.safeParse({
     name: formData.get("name"),
     group_type: formData.get("group_type"),
+    currency: formData.get("currency"),
     description: formData.get("description"),
     members_json: formData.get("members_json"),
   });
   if (!parsed.success) return { ok: false as const, message: "輸入格式不正確。" };
 
-  const { name, group_type, description, members_json } = parsed.data;
+  const { name, group_type, currency, description, members_json } = parsed.data;
 
   const { data: group, error: groupError } = await supabase
     .from("split_groups")
-    .insert({ user_id: user.id, name, group_type, description })
+    .insert({ user_id: user.id, name, group_type, currency, description })
     .select("id")
     .single();
   if (groupError || !group) return { ok: false as const, message: groupError?.message ?? "建立失敗。" };
@@ -393,6 +398,7 @@ export async function exportSplitToLedger(formData: FormData) {
       category: expense.category ?? "其他",
       description: expense.description ?? null,
       amount_jpy: Number(selfShare.share_amount),
+      currency: expense.currency,
       exchange_rate: Number(expense.exchange_rate),
       payment_method: expense.payment_method ?? null,
       split_expense_id: expenseId,

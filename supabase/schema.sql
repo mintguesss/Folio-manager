@@ -235,6 +235,8 @@ create table if not exists public.travel_expenses (
 );
 
 alter table public.travel_expenses add column if not exists payment_method text;
+-- 幣別（amount_jpy 存的是該幣別金額），見 migrations/20261018_travel_currency.sql
+alter table public.travel_expenses add column if not exists currency text not null default 'JPY';
 
 create index if not exists travel_expenses_user_trip_idx
   on public.travel_expenses (user_id, trip_name, occurred_on desc);

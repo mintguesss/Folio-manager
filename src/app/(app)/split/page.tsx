@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { addFx, fmtFxBag, toTravelCurrency, type FxBag } from "@/lib/currency";
 import { createSplitGroup, deleteSplitGroup, acceptSplitGroupInvite } from "@/app/actions/split";
 import { SplitGroupForm } from "@/components/SplitGroupForm";
 import { DeleteButton } from "@/components/DeleteButton";
@@ -56,12 +57,12 @@ export default async function SplitPage() {
           .in("group_id", allGroupIds)
       : { data: [] };
 
-  const totals: Record<string, { twd: number; jpy: number }> = {};
+  const totals: Record<string, { twd: number; fx: FxBag }> = {};
   for (const e of expenses ?? []) {
-    if (!totals[e.group_id]) totals[e.group_id] = { twd: 0, jpy: 0 };
-    if (e.currency === "JPY") {
+    if (!totals[e.group_id]) totals[e.group_id] = { twd: 0, fx: {} };
+    if (e.currency !== "TWD") {
       if (e.exchange_rate) totals[e.group_id].twd += Math.round(Number(e.amount) * Number(e.exchange_rate));
-      else totals[e.group_id].jpy += Number(e.amount);
+      else addFx(totals[e.group_id].fx, toTravelCurrency(e.currency), Number(e.amount));
     } else {
       totals[e.group_id].twd += Number(e.amount);
     }
@@ -72,7 +73,7 @@ export default async function SplitPage() {
     if (!t) return "0";
     const parts: string[] = [];
     if (t.twd > 0) parts.push(`TWD ${fmt(t.twd)}`);
-    if (t.jpy > 0) parts.push(`¥${fmt(t.jpy)}`);
+    if (fmtFxBag(t.fx)) parts.push(fmtFxBag(t.fx));
     return parts.length > 0 ? parts.join(" · ") : "0";
   }
 

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { SplitExpenseCard } from "@/components/SplitExpenseCard";
+import { addFx, fmtFxBag, toTravelCurrency, type FxBag } from "@/lib/currency";
 
 type SplitExpense = {
   id: string;
@@ -21,12 +22,11 @@ type Share = { id: string; expense_id: string; member_id: string; share_amount: 
 type Member = { id: string; name: string; is_self: boolean; sort_order?: number };
 
 const fmt = (n: number) => new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(n);
-const fmtJPY = (n: number) => new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 0 }).format(n);
 
 function dayTotal(expenses: SplitExpense[]) {
   return expenses.reduce((sum, e) => {
     const amt = Number(e.amount);
-    if (e.currency === "JPY" && e.exchange_rate) return sum + Math.round(amt * Number(e.exchange_rate));
+    if (e.currency !== "TWD" && e.exchange_rate) return sum + Math.round(amt * Number(e.exchange_rate));
     return sum + amt;
   }, 0);
 }
@@ -94,8 +94,10 @@ export function SplitExpenseListClient({
 
   const filteredTotal = useMemo(() => dayTotal(filtered), [filtered]);
 
-  const filteredJPY = useMemo(
-    () => filtered.filter(e => e.currency === "JPY").reduce((s, e) => s + Number(e.amount), 0),
+  const filteredFx = useMemo(
+    () => filtered
+      .filter(e => e.currency !== "TWD")
+      .reduce<FxBag>((bag, e) => addFx(bag, toTravelCurrency(e.currency), Number(e.amount)), {}),
     [filtered]
   );
 
@@ -143,7 +145,7 @@ export function SplitExpenseListClient({
             </select>
           )}
           <span className="ml-auto text-xs text-zinc-600 tabular-nums">
-            {filteredJPY > 0 && `¥${fmtJPY(filteredJPY)} · `}{fmt(filteredTotal)} TWD · {filtered.length} 筆
+            {fmtFxBag(filteredFx) && `${fmtFxBag(filteredFx)} · `}{fmt(filteredTotal)} TWD · {filtered.length} 筆
           </span>
         </div>
       )}
