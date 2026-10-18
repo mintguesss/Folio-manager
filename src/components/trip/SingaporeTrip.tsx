@@ -65,13 +65,13 @@ function Day2Section() {
         逛完可再回 <M q="Little India Singapore">小印度</M>走走，或回飯店休息
       </TimedItem>
       <TimedItem time="16:00">飯店附近吃晚餐</TimedItem>
-      <TimedItem time="17:35">
+      <TimedItem time="18:25">
         搭 Grab 去 <M q="Night Safari Singapore">夜間動物園</M>（約 30–35 分）
       </TimedItem>
-      <TimedItem time="19:15">
-        入園：先坐遊園車，再走步行路線，最後看表演（表演座位開演前 2 小時開放官網預約，選 20:30 以後的場次）
+      <TimedItem time="19:45">
+        入園：先坐遊園車，再走步行路線，最後看表演（表演座位開演前 2 小時開放官網預約，選 21:00 以後的場次）
       </TimedItem>
-      <TimedItem time="22:10">搭 Grab 回飯店（約 30 分）</TimedItem>
+      <TimedItem time="22:30">搭 Grab 回飯店（約 30 分）</TimedItem>
     </div>
   );
 }
