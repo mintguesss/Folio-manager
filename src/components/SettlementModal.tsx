@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useActionState } from "react";
 import { settleAllGroupShares } from "@/app/actions/split";
+import { fmtFx, type TravelCurrency } from "@/lib/currency";
 
 type Member = { id: string; name: string };
-type Debt = { debtor_id: string; creditor_id: string; jpy: number; twd: number };
+type Debt = { debtor_id: string; creditor_id: string; fx: number; twd: number };
 
 function fmt(n: number) {
   return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(n);
@@ -12,7 +13,7 @@ function fmt(n: number) {
 
 function computeNetDebts(debts: Debt[]): Debt[] {
   const netTWD = new Map<string, number>();
-  const netJPY = new Map<string, number>();
+  const netFx = new Map<string, number>();
 
   for (const d of debts) {
     const forward = d.debtor_id < d.creditor_id;
@@ -21,26 +22,26 @@ function computeNetDebts(debts: Debt[]): Debt[] {
       : `${d.creditor_id}:${d.debtor_id}`;
     const sign = forward ? 1 : -1;
     netTWD.set(key, (netTWD.get(key) ?? 0) + sign * d.twd);
-    netJPY.set(key, (netJPY.get(key) ?? 0) + sign * d.jpy);
+    netFx.set(key, (netFx.get(key) ?? 0) + sign * d.fx);
   }
 
-  const keys = new Set([...netTWD.keys(), ...netJPY.keys()]);
+  const keys = new Set([...netTWD.keys(), ...netFx.keys()]);
   const result: Debt[] = [];
 
   for (const key of keys) {
     const [a, b] = key.split(":");
     const twd = netTWD.get(key) ?? 0;
-    const jpy = netJPY.get(key) ?? 0;
-    if (Math.abs(twd) < 0.5 && Math.abs(jpy) < 0.5) continue;
+    const fx = netFx.get(key) ?? 0;
+    if (Math.abs(twd) < 0.5 && Math.abs(fx) < 0.005) continue;
 
-    if ((twd >= 0 && jpy >= 0) || (twd <= 0 && jpy <= 0)) {
-      const positive = twd >= 0;
-      result.push({ debtor_id: positive ? a : b, creditor_id: positive ? b : a, twd: Math.abs(twd), jpy: Math.abs(jpy) });
+    if ((twd >= 0 && fx >= 0) || (twd <= 0 && fx <= 0)) {
+      const positive = twd > 0 || (twd === 0 && fx >= 0);
+      result.push({ debtor_id: positive ? a : b, creditor_id: positive ? b : a, twd: Math.abs(twd), fx: Math.abs(fx) });
     } else {
       if (Math.abs(twd) > 0.5)
-        result.push({ debtor_id: twd > 0 ? a : b, creditor_id: twd > 0 ? b : a, twd: Math.abs(twd), jpy: 0 });
-      if (Math.abs(jpy) > 0.5)
-        result.push({ debtor_id: jpy > 0 ? a : b, creditor_id: jpy > 0 ? b : a, twd: 0, jpy: Math.abs(jpy) });
+        result.push({ debtor_id: twd > 0 ? a : b, creditor_id: twd > 0 ? b : a, twd: Math.abs(twd), fx: 0 });
+      if (Math.abs(fx) >= 0.005)
+        result.push({ debtor_id: fx > 0 ? a : b, creditor_id: fx > 0 ? b : a, twd: 0, fx: Math.abs(fx) });
     }
   }
 
@@ -52,11 +53,13 @@ export function SettlementModal({
   members,
   groupId,
   selfMemberId,
+  currency,
 }: {
   debts: Debt[];
   members: Member[];
   groupId: string;
   selfMemberId: string | undefined;
+  currency: TravelCurrency;
 }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<{ ok: boolean } | undefined, FormData>(
@@ -74,7 +77,7 @@ export function SettlementModal({
     netted.length !== debts.length ||
     netted.some((n) => {
       const orig = debts.find((d) => d.debtor_id === n.debtor_id && d.creditor_id === n.creditor_id);
-      return !orig || orig.twd !== n.twd || orig.jpy !== n.jpy;
+      return !orig || orig.twd !== n.twd || orig.fx !== n.fx;
     });
 
   return (
@@ -149,9 +152,9 @@ export function SettlementModal({
                               {fmt(d.twd)}<span className="ml-0.5 text-xs font-normal text-rose-400/50">元</span>
                             </div>
                           )}
-                          {d.jpy > 0.5 && (
+                          {d.fx >= 0.005 && (
                             <div className={["tabular-nums text-xs", d.twd > 0.5 ? "text-zinc-500" : "font-semibold text-rose-300"].join(" ")}>
-                              ¥{fmt(d.jpy)}
+                              {fmtFx(d.fx, currency)}
                             </div>
                           )}
                         </div>

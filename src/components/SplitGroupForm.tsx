@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { CURRENCY_INFO, GROUP_CURRENCIES, type TravelCurrency } from "@/lib/currency";
 
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
 
@@ -9,6 +10,7 @@ type Member = { id: number; db_id?: string; name: string; is_self: boolean };
 type InitialValues = {
   name: string;
   group_type: "general" | "travel";
+  currency: TravelCurrency;
   description: string;
   members: { db_id: string; name: string; is_self: boolean }[];
 };
@@ -27,6 +29,7 @@ export function SplitGroupForm({
 }) {
   const isEdit = !!groupId;
   const [open, setOpen] = useState(false);
+  const [groupType, setGroupType] = useState(initialValues?.group_type ?? "general");
   const [members, setMembers] = useState<Member[]>(() => {
     if (initialValues?.members) {
       return initialValues.members.map((m, i) => ({
@@ -97,7 +100,8 @@ export function SplitGroupForm({
           <div className="relative mt-1">
             <select
               name="group_type"
-              defaultValue={initialValues?.group_type ?? "general"}
+              value={groupType}
+              onChange={(e) => setGroupType(e.target.value as "general" | "travel")}
               className="w-full appearance-none rounded-xl border border-zinc-600 bg-zinc-800 py-2 pl-3 pr-8 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             >
               <option value="general">一般記帳</option>
@@ -111,6 +115,30 @@ export function SplitGroupForm({
             </svg>
           </div>
         </div>
+
+        {/* Currency (travel only) */}
+        {groupType === "travel" && (
+          <div className="col-span-2 sm:col-span-1">
+            <span className="text-xs font-medium text-zinc-200">幣別</span>
+            <div className="relative mt-1">
+              <select
+                name="currency"
+                defaultValue={initialValues?.currency ?? "JPY"}
+                className="w-full appearance-none rounded-xl border border-zinc-600 bg-zinc-800 py-2 pl-3 pr-8 text-sm text-zinc-100 outline-none focus:border-zinc-400"
+              >
+                {GROUP_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{CURRENCY_INFO[c].label}（{c}）</option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-400"
+                viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+              >
+                <path d="M2 4l4 4 4-4" />
+              </svg>
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         <label className="col-span-2 block">

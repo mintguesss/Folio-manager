@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { deleteSplitExpense, exportSplitToLedger, toggleSplitShare } from "@/app/actions/split";
 import { DeleteButton } from "@/components/DeleteButton";
+import { fmtFx, toTravelCurrency } from "@/lib/currency";
 
 type Share = { id: string; member_id: string; share_amount: number; is_settled: boolean };
 type Member = { id: string; name: string; is_self: boolean };
@@ -69,7 +70,8 @@ export function SplitExpenseCard({
   const selfShare = selfMember ? shares.find((s) => s.member_id === selfMember.id) : undefined;
   const canExport = selfShare?.is_settled === true;
   const isExported = isExportedProp || exportState?.ok === true;
-  const isJpy = expense.currency === "JPY";
+  const isFx = expense.currency !== "TWD";
+  const fxCur = toTravelCurrency(expense.currency);
   const exRate = expense.exchange_rate ? Number(expense.exchange_rate) : null;
   const amount = Number(expense.amount);
 
@@ -115,15 +117,15 @@ export function SplitExpenseCard({
               {expense.note ? ` · ${expense.note}` : ""}
             </span>
             <span className="shrink-0 tabular-nums">
-              {isJpy ? (
+              {isFx ? (
                 exRate ? (
                   <>
                     <span className="font-semibold text-white">{fmt(Math.round(amount * exRate))}</span>
                     <span className="ml-1 text-zinc-400">TWD</span>
-                    <span className="ml-2 text-zinc-500">¥{fmt(amount)}</span>
+                    <span className="ml-2 text-zinc-500">{fmtFx(amount, fxCur)}</span>
                   </>
                 ) : (
-                  <span className="font-semibold text-white">¥{fmt(amount)}</span>
+                  <span className="font-semibold text-white">{fmtFx(amount, fxCur)}</span>
                 )
               ) : (
                 <>
@@ -199,14 +201,14 @@ export function SplitExpenseCard({
                   {isPayer && <span className="ml-1.5 text-zinc-400">付款者</span>}
                 </span>
                 <div className="space-y-0.5 text-right">
-                  {isJpy ? (
+                  {isFx ? (
                     <>
                       {exRate && (
                         <div className="tabular-nums text-xs text-zinc-300">
                           {fmt(Math.round(shareAmt * exRate))} <span className="text-zinc-500">TWD</span>
                         </div>
                       )}
-                      <div className="tabular-nums text-xs text-zinc-500">¥{fmt(shareAmt)}</div>
+                      <div className="tabular-nums text-xs text-zinc-500">{fmtFx(shareAmt, fxCur)}</div>
                     </>
                   ) : (
                     <div className="tabular-nums text-xs text-zinc-300">{fmt(shareAmt)}</div>

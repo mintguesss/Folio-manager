@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateSplitGroup } from "@/app/actions/split";
 import { SplitGroupForm } from "@/components/SplitGroupForm";
+import { toTravelCurrency } from "@/lib/currency";
 
 export default async function EditGroupPage({
   params,
@@ -18,7 +19,7 @@ export default async function EditGroupPage({
   const [{ data: group }, { data: members }] = await Promise.all([
     supabase
       .from("split_groups")
-      .select("id, name, group_type, description")
+      .select("id, name, group_type, currency, description")
       .eq("id", id)
       .eq("user_id", user?.id ?? "")
       .single(),
@@ -34,6 +35,7 @@ export default async function EditGroupPage({
   const initialValues = {
     name: group.name,
     group_type: group.group_type as "general" | "travel",
+    currency: toTravelCurrency(group.currency),
     description: group.description ?? "",
     members: (members ?? []).map((m) => ({
       db_id: m.id,

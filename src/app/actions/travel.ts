@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { TRAVEL_CURRENCIES } from "@/lib/currency";
 
 const TravelExpenseSchema = z.object({
   trip_name: z
@@ -21,6 +22,7 @@ const TravelExpenseSchema = z.object({
     .optional()
     .transform((s) => (s ? s.trim() : null)),
   amount_jpy: z.coerce.number().finite().min(0),
+  currency: z.enum(TRAVEL_CURRENCIES).catch("JPY"),
   exchange_rate: z.coerce.number().finite().positive(),
   payment_method: z
     .string()
@@ -41,6 +43,7 @@ export async function createTravelExpense(formData: FormData) {
     category: formData.get("category"),
     description: formData.get("description"),
     amount_jpy: formData.get("amount_jpy"),
+    currency: formData.get("currency"),
     exchange_rate: formData.get("exchange_rate"),
     payment_method: formData.get("payment_method"),
   });
@@ -76,6 +79,7 @@ export async function updateTravelExpense(formData: FormData) {
     category: formData.get("category"),
     description: formData.get("description"),
     amount_jpy: formData.get("amount_jpy"),
+    currency: formData.get("currency"),
     exchange_rate: formData.get("exchange_rate"),
     payment_method: formData.get("payment_method"),
   });

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateSplitExpense } from "@/app/actions/split";
 import { SplitExpenseForm } from "@/components/SplitExpenseForm";
+import { toTravelCurrency } from "@/lib/currency";
 
 export default async function EditExpensePage({
   params,
@@ -17,7 +18,7 @@ export default async function EditExpensePage({
 
   const { data: group } = await supabase
     .from("split_groups")
-    .select("id, name, group_type")
+    .select("id, name, group_type, currency")
     .eq("id", id)
     .single();
 
@@ -91,6 +92,7 @@ export default async function EditExpensePage({
         <SplitExpenseForm
           groupId={group.id}
           groupType={group.group_type as "general" | "travel"}
+          currency={toTravelCurrency(expense.currency !== "TWD" ? expense.currency : group.currency)}
           members={members}
           selfMemberId={selfMemberId}
           onCreate={updateSplitExpense}

@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { deleteTravelExpense } from "@/app/actions/travel";
 import { DeleteButton } from "@/components/DeleteButton";
+import { addFx, fmtFx, fmtFxBag, type FxBag, type TravelCurrency } from "@/lib/currency";
 
 type TravelExpense = {
   id: string;
@@ -12,6 +13,7 @@ type TravelExpense = {
   category: string;
   description: string | null;
   amount_jpy: number;
+  currency: TravelCurrency;
   exchange_rate: number;
   payment_method: string | null;
 };
@@ -21,7 +23,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
 };
 
 const fmt = (n: number) => new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(n);
-const fmtJPY = (n: number) => new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 0 }).format(n);
 
 function ExpenseRow({ expense }: { expense: TravelExpense }) {
   const twd = Math.round(Number(expense.amount_jpy) * Number(expense.exchange_rate));
@@ -42,7 +43,9 @@ function ExpenseRow({ expense }: { expense: TravelExpense }) {
       </div>
       <div className="shrink-0 text-right">
         <div className="tabular-nums text-sm font-semibold text-white">{fmt(twd)}</div>
-        <div className="tabular-nums text-xs text-zinc-500">¥{fmtJPY(Number(expense.amount_jpy))}</div>
+        {expense.currency !== "TWD" && (
+          <div className="tabular-nums text-xs text-zinc-500">{fmtFx(Number(expense.amount_jpy), expense.currency)}</div>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
         <Link
@@ -86,8 +89,8 @@ export function TravelExpenseList({ expenses }: { expenses: TravelExpense[] }) {
     [filtered]
   );
 
-  const filteredJPY = useMemo(
-    () => filtered.reduce((s, e) => s + Number(e.amount_jpy), 0),
+  const filteredFx = useMemo(
+    () => filtered.reduce<FxBag>((bag, e) => e.currency === "TWD" ? bag : addFx(bag, e.currency, Number(e.amount_jpy)), {}),
     [filtered]
   );
 
@@ -134,7 +137,7 @@ export function TravelExpenseList({ expenses }: { expenses: TravelExpense[] }) {
               {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           )}
-          <span className="ml-auto text-xs text-zinc-600 tabular-nums">¥{fmtJPY(filteredJPY)} · {fmt(filteredTotal)} TWD · {filtered.length} 筆</span>
+          <span className="ml-auto text-xs text-zinc-600 tabular-nums">{fmtFxBag(filteredFx) && `${fmtFxBag(filteredFx)} · `}{fmt(filteredTotal)} TWD · {filtered.length} 筆</span>
         </div>
       )}
 

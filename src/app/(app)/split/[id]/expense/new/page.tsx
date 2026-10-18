@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createSplitExpense } from "@/app/actions/split";
 import { SplitExpenseForm } from "@/components/SplitExpenseForm";
+import { toTravelCurrency } from "@/lib/currency";
 
 export default async function NewExpensePage({
   params,
@@ -17,7 +18,7 @@ export default async function NewExpensePage({
 
   const { data: group } = await supabase
     .from("split_groups")
-    .select("id, name, group_type")
+    .select("id, name, group_type, currency")
     .eq("id", id)
     .single();
 
@@ -57,6 +58,7 @@ export default async function NewExpensePage({
         <SplitExpenseForm
           groupId={group.id}
           groupType={group.group_type as "general" | "travel"}
+          currency={toTravelCurrency(group.currency)}
           members={members}
           selfMemberId={selfMemberId}
           onCreate={createSplitExpense}

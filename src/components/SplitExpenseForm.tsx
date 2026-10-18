@@ -2,12 +2,12 @@
 
 import { useActionState, useState, useEffect, useRef } from "react";
 import { Combobox } from "@/components/Combobox";
+import { CURRENCY_INFO, roundFx, type TravelCurrency } from "@/lib/currency";
 
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
 type Member = { id: string; name: string; is_self: boolean };
 
 const TRAVEL_CATEGORIES = ["食事", "住宿", "交通", "購物", "門票", "其他"];
-const TRAVEL_PAYMENT = ["信用卡", "現金", "Suica", "IC卡", "LinePay"];
 const GENERAL_CATEGORIES = ["早餐", "午餐", "晚餐", "點心", "交通", "網購", "購物", "其他"];
 const GENERAL_PAYMENT = ["現金", "LinePay", "華南銀行", "中國信託"];
 
@@ -51,6 +51,7 @@ type InitialValues = {
 export function SplitExpenseForm({
   groupId,
   groupType,
+  currency = "JPY",
   members,
   selfMemberId,
   onCreate,
@@ -60,6 +61,7 @@ export function SplitExpenseForm({
 }: {
   groupId: string;
   groupType: "general" | "travel";
+  currency?: TravelCurrency;
   members: Member[];
   selfMemberId?: string;
   onCreate: (formData: FormData) => Promise<ActionResult>;
@@ -70,9 +72,13 @@ export function SplitExpenseForm({
   const todayStr = new Date().toISOString().slice(0, 10);
   const isTravel = groupType === "travel";
   const iv = initialValues;
+  const info = CURRENCY_INFO[currency];
+  const fxStep = info.decimals > 0 ? 1 / 10 ** info.decimals : 1;
+  const fmtF = (n: number) =>
+    new Intl.NumberFormat("zh-TW", { maximumFractionDigits: info.decimals }).format(n);
 
   // ── Amount state
-  const [jpyValue, setJpyValue] = useState(() => isTravel && iv ? String(iv.amount) : "");
+  const [fxValue, setFxValue] = useState(() => isTravel && iv ? String(iv.amount) : "");
   const [twdValue, setTwdValue] = useState(() => {
     if (!isTravel && iv) return String(iv.amount);
     if (isTravel && iv?.exchange_rate && iv.amount) return String(Math.round(iv.amount * iv.exchange_rate));
@@ -81,7 +87,7 @@ export function SplitExpenseForm({
   const [rate, setRate] = useState(iv?.exchange_rate ?? 0);
   const [liveRate, setLiveRate] = useState<number | null>(null);
   const [rateFetching, setRateFetching] = useState(false);
-  const lastEdited = useRef<"jpy" | "twd">("jpy");
+  const lastEdited = useRef<"fx" | "twd">("fx");
   const dateTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [dateValue, setDateValue] = useState(iv?.expense_date ?? todayStr);
 
@@ -118,7 +124,7 @@ export function SplitExpenseForm({
   // ── Fetch live rate on mount (travel only; skip if editing with existing rate)
   useEffect(() => {
     if (!isTravel || iv?.exchange_rate) return;
-    fetch("/api/fx")
+    fetch(`/api/fx?currency=${currency}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.rate && Number.isFinite(data.rate) && data.rate > 0) {
@@ -138,15 +144,15 @@ export function SplitExpenseForm({
     dateTimer.current = setTimeout(async () => {
       setRateFetching(true);
       try {
-        const res = await fetch(`/api/fx?date=${encodeURIComponent(v)}`);
+        const res = await fetch(`/api/fx?currency=${currency}&date=${encodeURIComponent(v)}`);
         const data = await res.json();
         if (data.rate && Number.isFinite(data.rate) && data.rate > 0) {
           const r = Math.round(data.rate * 10000) / 10000;
           setRate(r);
-          if (lastEdited.current === "jpy" && jpyValue !== "") {
-            setTwdValue(String(Math.round(Number(jpyValue) * r)));
+          if (lastEdited.current === "fx" && fxValue !== "") {
+            setTwdValue(String(Math.round(Number(fxValue) * r)));
           } else if (lastEdited.current === "twd" && twdValue !== "") {
-            setJpyValue(String(Math.round(Number(twdValue) / r)));
+            setFxValue(String(roundFx(Number(twdValue) / r, currency)));
           }
         }
       } catch {}
@@ -154,9 +160,9 @@ export function SplitExpenseForm({
     }, 600);
   }
 
-  function handleJpy(v: string) {
-    lastEdited.current = "jpy";
-    setJpyValue(v);
+  function handleFx(v: string) {
+    lastEdited.current = "fx";
+    setFxValue(v);
     const n = Number(v);
     if (v !== "" && Number.isFinite(n) && n >= 0) {
       setTwdValue(String(Math.round(n * rate)));
@@ -171,9 +177,9 @@ export function SplitExpenseForm({
     if (isTravel) {
       const n = Number(v);
       if (v !== "" && Number.isFinite(n) && n >= 0 && rate > 0) {
-        setJpyValue(String(Math.round(n / rate)));
+        setFxValue(String(roundFx(n / rate, currency)));
       } else {
-        setJpyValue("");
+        setFxValue("");
       }
     }
   }
@@ -182,10 +188,10 @@ export function SplitExpenseForm({
     const n = Number(v);
     setRate(Number.isFinite(n) && n > 0 ? n : 0);
     if (Number.isFinite(n) && n > 0) {
-      if (lastEdited.current === "jpy" && jpyValue !== "") {
-        setTwdValue(String(Math.round(Number(jpyValue) * n)));
+      if (lastEdited.current === "fx" && fxValue !== "") {
+        setTwdValue(String(Math.round(Number(fxValue) * n)));
       } else if (lastEdited.current === "twd" && twdValue !== "") {
-        setJpyValue(String(Math.round(Number(twdValue) / n)));
+        setFxValue(String(roundFx(Number(twdValue) / n, currency)));
       }
       setCustomSharesAlt(() => {
         const updated: Record<string, string> = {};
@@ -212,11 +218,11 @@ export function SplitExpenseForm({
     const n = Number(v);
     setCustomShares((prev) => ({
       ...prev,
-      [id]: v !== "" && Number.isFinite(n) && n >= 0 && rate > 0 ? String(Math.round(n / rate)) : "",
+      [id]: v !== "" && Number.isFinite(n) && n >= 0 && rate > 0 ? String(roundFx(n / rate, currency)) : "",
     }));
   }
 
-  const amountNum = isTravel ? Number(jpyValue) : Number(twdValue);
+  const amountNum = isTravel ? Number(fxValue) : Number(twdValue);
   const participantList = members.filter((m) => participants.has(m.id));
   const equalShare = participantList.length > 0 && amountNum > 0 ? amountNum / participantList.length : 0;
 
@@ -240,8 +246,8 @@ export function SplitExpenseForm({
 
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(
     async (_prev, formData) => {
-      formData.set("amount", isTravel ? (jpyValue || "0") : (twdValue || "0"));
-      formData.set("currency", isTravel ? "JPY" : "TWD");
+      formData.set("amount", isTravel ? (fxValue || "0") : (twdValue || "0"));
+      formData.set("currency", isTravel ? currency : "TWD");
       if (isTravel && rate > 0) formData.set("exchange_rate", String(rate));
       formData.set("split_type", splitType);
       formData.set("description", isTravel ? description : counterparty);
@@ -313,8 +319,8 @@ export function SplitExpenseForm({
       {isTravel ? (
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className={labelCls}>金額（JPY）</span>
-            <input type="number" min="0" step="1" value={jpyValue} onChange={(e) => handleJpy(e.target.value)} placeholder="0" className={inputCls} />
+            <span className={labelCls}>金額（{currency}）</span>
+            <input type="number" min="0" step={fxStep} value={fxValue} onChange={(e) => handleFx(e.target.value)} placeholder="0" className={inputCls} />
           </label>
           <label className="block">
             <span className={labelCls}>換算（TWD）</span>
@@ -339,7 +345,7 @@ export function SplitExpenseForm({
             name="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="例：拉麵、新幹線、飯店"
+            placeholder="例：海南雞飯、捷運、飯店"
             className={inputCls}
           />
         </label>
@@ -371,7 +377,7 @@ export function SplitExpenseForm({
           <div>
             <span className={labelCls}>支付方式（可空）</span>
             <div className="mt-1">
-              <Combobox name="payment_method" options={TRAVEL_PAYMENT} value={paymentMethod} onChange={setPaymentMethod} placeholder="現金 / 信用卡 / ..." />
+              <Combobox name="payment_method" options={info.payments} value={paymentMethod} onChange={setPaymentMethod} placeholder="現金 / 信用卡 / ..." />
             </div>
           </div>
         </div>
@@ -454,7 +460,7 @@ export function SplitExpenseForm({
                   isTravel ? (
                     <div className="shrink-0 text-right text-xs tabular-nums">
                       {rate > 0 && <div className="text-emerald-300">{fmt(Math.round(equalShare * rate))} <span className="text-emerald-400/50">TWD</span></div>}
-                      <div className={rate > 0 ? "text-zinc-500" : "text-sky-300"}>{fmt(equalShare)} <span className="text-zinc-600">JPY</span></div>
+                      <div className={rate > 0 ? "text-zinc-500" : "text-sky-300"}>{fmtF(equalShare)} <span className="text-zinc-600">{currency}</span></div>
                     </div>
                   ) : (
                     <span className="shrink-0 tabular-nums text-xs text-sky-300">{fmt(equalShare)}</span>
@@ -464,7 +470,7 @@ export function SplitExpenseForm({
                   isTravel ? (
                     <div className="flex gap-1.5">
                       <input
-                        type="number" step="1" min="0" value={customShares[m.id] ?? ""} onChange={(e) => handleCustomPrimary(m.id, e.target.value)} placeholder="JPY"
+                        type="number" step={fxStep} min="0" value={customShares[m.id] ?? ""} onChange={(e) => handleCustomPrimary(m.id, e.target.value)} placeholder={currency}
                         className="w-[4.5rem] rounded-xl border border-zinc-600 bg-zinc-800 px-2 py-1 text-right text-sm tabular-nums text-zinc-100 outline-none focus:border-zinc-400 placeholder:text-zinc-600"
                       />
                       <input
@@ -487,7 +493,7 @@ export function SplitExpenseForm({
         {splitType === "custom" && amountNum > 0 && (
           <div className="mt-2 space-y-0.5 text-right text-xs">
             <div className={customValid ? "text-emerald-400" : "text-rose-400"}>
-              合計 {fmt(customTotal)} / {fmt(amountNum)} {isTravel ? "JPY" : "TWD"}
+              合計 {isTravel ? `${fmtF(customTotal)} / ${fmtF(amountNum)} ${currency}` : `${fmt(customTotal)} / ${fmt(amountNum)} TWD`}
               {!customValid && " （金額不符）"}
             </div>
             {isTravel && rate > 0 && (

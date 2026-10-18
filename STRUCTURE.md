@@ -134,6 +134,7 @@ src/
 │       └── JapanTrip.tsx         # 2026/05 日本東京行程（以前，含想日本第 N 天）
 │
 └── lib/                          # 共用邏輯/工具
+    ├── currency.ts               # 出國外幣設定（JPY / SGD：符號、小數位、匯率代號、支付方式）
     ├── stock-utils.ts            # 股價抓取（Yahoo Finance + TWSE）、匯率、同步
     ├── position-calc.ts          # 台股 + 美股 FIFO 損益計算（美股含歷史匯率 TWD 成本）
     ├── market-hours.ts           # 判斷現在是否台/美股盤中

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY_INFO, type TravelCurrency } from "@/lib/currency";
 
 type QuoteResult = {
   close: number;
@@ -116,8 +117,11 @@ async function fetchFXRate(
 }
 
 export const fetchUSDTWD = () => fetchFXRate("USDTWD=X", 32.0, 20, 60);
-export const fetchJPYTWD = () => fetchFXRate("JPYTWD=X", 0.217, 0.1, 1.0);
-export const fetchJPYTWDLive = () => fetchFXRate("JPYTWD=X", 0.217, 0.1, 1.0, true);
+export const fetchTravelFx = async (cur: TravelCurrency, live = false) => {
+  if (cur === "TWD") return 1;
+  const { symbol, fallback, min, max } = CURRENCY_INFO[cur].fx;
+  return fetchFXRate(symbol, fallback, min, max, live);
+};
 
 export async function fetchUSDTWDForDate(dateStr: string): Promise<number> {
   const ts = Math.floor(new Date(`${dateStr}T04:00:00Z`).getTime() / 1000);
@@ -142,12 +146,14 @@ export async function fetchUSDTWDForDate(dateStr: string): Promise<number> {
   return fetchUSDTWD();
 }
 
-export async function fetchJPYTWDForDate(dateStr: string): Promise<number> {
+export async function fetchTravelFxForDate(cur: TravelCurrency, dateStr: string): Promise<number> {
+  if (cur === "TWD") return 1;
+  const { symbol, min, max } = CURRENCY_INFO[cur].fx;
   const ts = Math.floor(new Date(`${dateStr}T04:00:00Z`).getTime() / 1000);
   const tsEnd = ts + 86400;
   for (const host of ["query1", "query2"]) {
     try {
-      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/JPYTWD=X?interval=1d&period1=${ts}&period2=${tsEnd}`;
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${ts}&period2=${tsEnd}`;
       const resp = await fetch(url, {
         cache: "no-store",
         headers: {
@@ -158,11 +164,11 @@ export async function fetchJPYTWDForDate(dateStr: string): Promise<number> {
       if (!resp.ok) continue;
       const json = await resp.json();
       const closes: number[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-      const close = closes.find((c) => Number.isFinite(c) && c > 0.1 && c < 1.0);
+      const close = closes.find((c) => Number.isFinite(c) && c > min && c < max);
       if (close) return close;
     } catch {}
   }
-  return fetchJPYTWD();
+  return fetchTravelFx(cur);
 }
 
 export async function fetchClose(
