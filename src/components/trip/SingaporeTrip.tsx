@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { M, Check, Bullet, TimedItem, DayHeader, LocHead, TripHeader, TabBar, FilterPills } from "./shared";
+import { M, Check, Bullet, TimedItem, SubHead, DayHeader, LocHead, TripHeader, TabBar, FilterPills } from "./shared";
 
 // ── Tab content sections ──────────────────────────────────────
 
@@ -255,9 +255,41 @@ function FoodSection() {
   );
 }
 
+// ── Gift ──────────────────────────────────────────────────────
+
+function GiftSection() {
+  return (
+    <div className="space-y-3">
+      <SubHead>百勝廚 Prima Taste 叻沙拉麵</SubHead>
+      <Bullet>
+        <M q="FairPrice Orchard Singapore">FairPrice 超市</M>（確定有賣，4 包裝約 S$10–12）
+      </Bullet>
+      <Bullet>
+        <M q="Mustafa Centre">Mustafa Centre</M>（Day 2 順便看，沒有再去 FairPrice）
+      </Bullet>
+
+      <SubHead>Aroma Truffle 松露洋芋片</SubHead>
+      <Bullet>
+        <M q="Aroma Truffle Bugis+">Bugis+</M>（Day 2 甘榜格南走過去約 10 分）
+      </Bullet>
+      <Bullet>
+        <M q="Aroma Truffle Chinatown Point">Chinatown Point</M>（Day 5 牛車水順路）
+      </Bullet>
+      <Bullet>
+        <M q="Aroma Truffle Jewel Changi Airport">星耀樟宜 Jewel</M>（Day 1 落地如果還開著）
+      </Bullet>
+
+      <SubHead>F.EAST 洋芋片（海南雞飯、叻沙口味）</SubHead>
+      <Bullet>7-Eleven、<M q="FairPrice Orchard Singapore">FairPrice 超市</M>（可以跟叻沙拉麵一起買）</Bullet>
+
+      <p className="pt-2 text-xs text-zinc-500">店家資訊是網路上舊資料，出發前再上官網確認。</p>
+    </div>
+  );
+}
+
 // ── Tab definitions ───────────────────────────────────────────
 
-type TabId = "checklist" | "d1" | "d2" | "d3" | "d4" | "d5" | "d6" | "food";
+type TabId = "checklist" | "d1" | "d2" | "d3" | "d4" | "d5" | "d6" | "gift" | "food";
 
 function getDefaultTab(): TabId {
   const now = new Date();
@@ -280,6 +312,7 @@ const TABS: { id: TabId; top: string; bottom: string }[] = [
   { id: "d4", top: "Day 4", bottom: "10/24" },
   { id: "d5", top: "Day 5", bottom: "10/25" },
   { id: "d6", top: "Day 6", bottom: "10/26" },
+  { id: "gift", top: "🎁", bottom: "伴手禮" },
   { id: "food", top: "🍜", bottom: "吃" },
 ];
 
@@ -291,6 +324,7 @@ const CONTENT: Record<TabId, React.ReactNode> = {
   d4: <Day4Section />,
   d5: <Day5Section />,
   d6: <Day6Section />,
+  gift: <GiftSection />,
   food: <FoodSection />,
 };
 
