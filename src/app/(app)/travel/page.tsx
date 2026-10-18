@@ -11,7 +11,7 @@ export default async function TravelPage({
 }: {
   searchParams: Promise<{ trip?: string }>;
 }) {
-  const { trip: tripFilter } = await searchParams;
+  const { trip: tripParam } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -46,6 +46,10 @@ export default async function TravelPage({
   const tripOptions = Array.from(
     new Set([...allTrips, ...(travelGroups ?? []).map((g) => g.name)])
   ).sort();
+
+  // 沒指定行程時預設顯示最新的行程（最新的出國分帳群組，否則最近一筆記帳）；?trip=all 看全部
+  const latestTrip = travelGroups?.[0]?.name ?? expenses[0]?.trip_name;
+  const tripFilter = tripParam === "all" ? undefined : (tripParam ?? latestTrip);
 
   const defaultCurrency: TravelCurrency =
     (tripFilter && tripCurrencies[tripFilter]) ||
@@ -83,7 +87,7 @@ export default async function TravelPage({
         </div>
         {tripFilter && (
           <Link
-            href="/travel"
+            href="/travel?trip=all"
             className="mt-1 shrink-0 text-xs text-sky-400 hover:underline"
           >
             清除篩選
@@ -101,10 +105,10 @@ export default async function TravelPage({
       />
 
       {/* Trip filter tabs */}
-      {allTrips.length > 0 && (
+      {tripOptions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/travel"
+            href="/travel?trip=all"
             className={[
               "rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors",
               !tripFilter
@@ -114,7 +118,7 @@ export default async function TravelPage({
           >
             全部
           </Link>
-          {allTrips.map((t) => (
+          {tripOptions.map((t) => (
             <Link
               key={t}
               href={`/travel?trip=${encodeURIComponent(t)}`}
