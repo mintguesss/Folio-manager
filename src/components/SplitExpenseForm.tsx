@@ -7,7 +7,7 @@ import { CURRENCY_INFO, roundFx, type TravelCurrency } from "@/lib/currency";
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
 type Member = { id: string; name: string; is_self: boolean };
 
-const TRAVEL_CATEGORIES = ["食事", "住宿", "交通", "購物", "門票", "其他"];
+const TRAVEL_CATEGORIES = ["食事", "住宿", "交通", "購物", "門票", "機票", "其他"];
 const GENERAL_CATEGORIES = ["早餐", "午餐", "晚餐", "點心", "交通", "網購", "購物", "其他"];
 const GENERAL_PAYMENT = ["現金", "LinePay", "華南銀行", "中國信託"];
 

@@ -19,7 +19,7 @@ type TravelExpense = {
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  食事: "🍜", 住宿: "🏨", 交通: "🚅", 購物: "🛍", 門票: "🎫", 其他: "📦",
+  食事: "🍜", 住宿: "🏨", 交通: "🚅", 購物: "🛍", 門票: "🎫", 機票: "✈️", 其他: "📦",
 };
 
 const fmt = (n: number) => new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(n);

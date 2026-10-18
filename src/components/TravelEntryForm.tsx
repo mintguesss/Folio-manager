@@ -8,7 +8,7 @@ import { CURRENCY_INFO, TRAVEL_CURRENCIES, roundFx, type TravelCurrency } from "
 
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
 
-const PRESET_CATEGORIES = ["食事", "住宿", "交通", "購物", "門票", "其他"];
+const PRESET_CATEGORIES = ["食事", "住宿", "交通", "購物", "門票", "機票", "其他"];
 
 function today() {
   return new Date().toISOString().slice(0, 10);

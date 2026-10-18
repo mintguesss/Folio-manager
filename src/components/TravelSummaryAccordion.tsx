@@ -9,6 +9,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
   交通: "🚅",
   購物: "🛍",
   門票: "🎫",
+  機票: "✈️",
   其他: "📦",
 };
 
