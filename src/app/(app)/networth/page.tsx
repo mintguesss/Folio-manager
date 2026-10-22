@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { deleteAssetSnapshot } from "@/app/actions/assets";
 import { DeleteButton } from "@/components/DeleteButton";
 import { AssetModal } from "@/components/AssetModal";
@@ -11,9 +11,7 @@ function formatNumber(n: number) {
 
 export default async function NetWorthPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const { data: snapshots } = await supabase
     .from("asset_snapshots")

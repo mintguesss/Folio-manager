@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { after } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { syncLatestQuotes } from "@/app/actions/quotes";
 import { fetchUSDTWD, syncQuotesForUser } from "@/lib/stock-utils";
 import { isMarketHours } from "@/lib/market-hours";
@@ -89,7 +89,7 @@ export default async function PositionsPage({
   const viewFilter: "held" | "realized" = view === "realized" ? "realized" : "held";
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
 
 
   const [usdtwd, { data: tradesRaw }, { data: quotesRaw }] = await Promise.all([
@@ -359,7 +359,7 @@ export default async function PositionsPage({
   after(async () => {
     try {
       const bg = await createClient();
-      const { data: { user: bgUser } } = await bg.auth.getUser();
+      const bgUser = await getUser();
       if (!bgUser) return;
       if (hasMissingQuote) {
         await syncQuotesForUser();

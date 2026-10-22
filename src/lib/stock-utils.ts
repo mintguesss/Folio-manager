@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { CURRENCY_INFO, type TravelCurrency } from "@/lib/currency";
 
 type QuoteResult = {
@@ -189,9 +189,7 @@ export async function syncQuotesForUser(): Promise<{
   failed: string[];
 }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { synced: 0, failed: [] };
 
   const { data: trades } = await supabase

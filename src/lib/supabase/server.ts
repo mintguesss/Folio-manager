@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
@@ -30,3 +31,18 @@ export async function createClient() {
   });
 }
 
+
+export type AuthUser = { id: string; email: string | null };
+
+/**
+ * 目前登入的使用者。
+ * 用 getClaims() 在本地驗證 JWT（專案用 ES256 非對稱金鑰），不用每次都連 Supabase Auth；
+ * 同一個 request 裡 layout、page 多次呼叫只會算一次。
+ */
+export const getUser = cache(async (): Promise<AuthUser | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null };
+});

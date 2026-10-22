@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { GROUP_CURRENCIES } from "@/lib/currency";
 
@@ -30,9 +30,7 @@ export async function updateSplitGroup(formData: FormData) {
   if (!groupId) return { ok: false as const, message: "缺少群組 ID。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = UpdateGroupSchema.safeParse({
@@ -101,9 +99,7 @@ const GroupSchema = z.object({
 
 export async function createSplitGroup(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = GroupSchema.safeParse({
@@ -158,9 +154,7 @@ export async function createSplitGroup(formData: FormData) {
 export async function deleteSplitGroup(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("split_groups").delete().eq("user_id", user.id).eq("id", id);
@@ -204,9 +198,7 @@ const ExpenseSchema = z.object({
 
 export async function createSplitExpense(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = ExpenseSchema.safeParse({
@@ -262,9 +254,7 @@ export async function createSplitExpense(formData: FormData) {
 
 export async function updateSplitExpense(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const expenseId = String(formData.get("expense_id") ?? "");
@@ -325,9 +315,7 @@ export async function deleteSplitExpense(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const group_id = String(formData.get("group_id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("split_expenses").delete().eq("id", id);
@@ -341,9 +329,7 @@ export async function exportSplitToLedger(formData: FormData) {
   if (!expenseId) return { ok: false as const, message: "缺少支出 ID。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const { data: expense } = await supabase
@@ -434,9 +420,7 @@ export async function toggleSplitShare(formData: FormData) {
   const group_id = String(formData.get("group_id") ?? "");
   const current = formData.get("is_settled") === "true";
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   const newSettled = !current;
@@ -462,9 +446,7 @@ export async function inviteToSplitGroup(formData: FormData) {
     return { ok: false as const, message: "請填寫 Email。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   // Only group owner can invite
@@ -505,9 +487,7 @@ export async function acceptSplitGroupInvite(formData: FormData) {
   if (!invite_id) return { ok: false as const, message: "缺少邀請 ID。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const { data: invite } = await supabase
@@ -543,9 +523,7 @@ export async function cancelSplitGroupInvite(formData: FormData) {
   const invite_id = String(formData.get("invite_id") ?? "");
   const group_id = String(formData.get("group_id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("split_group_invites").delete().eq("id", invite_id);
@@ -561,9 +539,7 @@ export async function settleAllGroupShares(
   if (!group_id) return { ok: false };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false };
 
   // RLS enforces access — just fetch expense ids for the group

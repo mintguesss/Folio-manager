@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { TRAVEL_CURRENCIES } from "@/lib/currency";
 
@@ -32,9 +32,7 @@ const TravelExpenseSchema = z.object({
 
 export async function createTravelExpense(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = TravelExpenseSchema.safeParse({
@@ -68,9 +66,7 @@ export async function updateTravelExpense(formData: FormData) {
   if (!id) return { ok: false as const, message: "缺少 ID。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = TravelExpenseSchema.safeParse({
@@ -101,9 +97,7 @@ export async function updateTravelExpense(formData: FormData) {
 export async function deleteTravelExpense(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase

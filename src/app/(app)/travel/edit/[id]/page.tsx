@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { TravelEntryForm } from "@/components/TravelEntryForm";
 import { fetchTravelFx } from "@/lib/stock-utils";
 import { toTravelCurrency, type TravelCurrency } from "@/lib/currency";
@@ -12,9 +12,7 @@ export default async function EditTravelPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) redirect("/login");
 
   const [{ data: expense }, { data: tripsRaw }] = await Promise.all([

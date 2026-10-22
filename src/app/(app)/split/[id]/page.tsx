@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { SettlementModal } from "@/components/SettlementModal";
 import { SplitExpenseListClient } from "@/components/SplitExpenseListClient";
 import { fmtFx, toTravelCurrency } from "@/lib/currency";
@@ -16,22 +16,15 @@ export default async function SplitGroupPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
-  // Allow both owner and members (RLS enforces access)
-  const { data: group } = await supabase
-    .from("split_groups")
-    .select("id, name, group_type, currency, description, user_id")
-    .eq("id", id)
-    .single();
-
-  if (!group) notFound();
-
-  const isOwner = group.user_id === user?.id;
-
-  const [{ data: members }, { data: expenses }, { data: myGroupUserRows }] = await Promise.all([
+  const [{ data: group }, { data: members }, { data: expenses }, { data: myGroupUserRows }] = await Promise.all([
+    // Allow both owner and members (RLS enforces access)
+    supabase
+      .from("split_groups")
+      .select("id, name, group_type, currency, description, user_id")
+      .eq("id", id)
+      .single(),
     supabase
       .from("split_members")
       .select("id, name, is_self, sort_order")
@@ -50,6 +43,10 @@ export default async function SplitGroupPage({
       .eq("user_id", user?.id ?? "")
       .limit(1),
   ]);
+
+  if (!group) notFound();
+
+  const isOwner = group.user_id === user?.id;
 
   // Determine which member represents the current user
   const selfMemberId =

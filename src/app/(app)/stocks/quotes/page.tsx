@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { deleteQuote, syncLatestQuotes } from "@/app/actions/quotes";
 
 function formatNumber(n: number) {
@@ -15,9 +15,7 @@ export default async function QuotesPage({
   const marketFilter = market === "TW" || market === "US" ? market : "ALL";
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   let q = supabase
     .from("stock_quotes")

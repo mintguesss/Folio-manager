@@ -1,12 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { createLedgerEntry } from "@/app/actions/ledger";
 import { LedgerClient } from "./LedgerClient";
 
 export default async function LedgerPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const { data: entries } = await supabase
     .from("ledger_entries")
