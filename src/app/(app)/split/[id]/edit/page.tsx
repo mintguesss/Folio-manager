@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { updateSplitGroup } from "@/app/actions/split";
 import { SplitGroupForm } from "@/components/SplitGroupForm";
 import { toTravelCurrency } from "@/lib/currency";
@@ -12,9 +12,7 @@ export default async function EditGroupPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [{ data: group }, { data: members }] = await Promise.all([
     supabase

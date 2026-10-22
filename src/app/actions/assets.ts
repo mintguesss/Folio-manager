@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const Money = z.coerce.number().finite().min(0).default(0);
@@ -23,12 +23,9 @@ const AssetSnapshotSchema = z.object({
 
 export async function upsertAssetSnapshot(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
-  if (userError || !user) {
+  if (!user) {
     return { ok: false as const, message: "尚未登入。" };
   }
 
@@ -79,9 +76,7 @@ export async function upsertAssetSnapshot(formData: FormData) {
 export async function deleteAssetSnapshot(formData: FormData) {
   const snapshot_date = String(formData.get("snapshot_date") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) return;
 

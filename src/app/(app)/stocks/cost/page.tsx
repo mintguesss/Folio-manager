@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { computePositions, type ComputedPosition } from "@/lib/position-calc";
 import { StockCostAccordion, type StockPosition } from "@/components/StockCostAccordion";
 import { BackfillFxButton } from "@/components/BackfillFxButton";
@@ -13,7 +13,7 @@ export default async function CostPage({
   const marketFilter: "TW" | "US" = market === "US" ? "US" : "TW";
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [{ data: tradesRaw }, { data: quotesRaw }] = await Promise.all([
     supabase

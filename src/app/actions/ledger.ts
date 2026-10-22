@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const EntrySchema = z.object({
@@ -17,9 +17,7 @@ const EntrySchema = z.object({
 
 export async function createLedgerEntry(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = EntrySchema.safeParse({
@@ -51,9 +49,7 @@ export async function createLedgerEntry(formData: FormData) {
 export async function updateLedgerEntry(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = EntrySchema.safeParse({
@@ -85,9 +81,7 @@ export async function updateLedgerEntry(formData: FormData) {
 export async function deleteLedgerEntry(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("ledger_entries").delete().eq("user_id", user.id).eq("id", id);

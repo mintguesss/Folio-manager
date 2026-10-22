@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { AssetGrowthChart, type AssetPoint } from "@/components/AssetGrowthChart";
 
 function fmt(n: number) {
@@ -30,9 +30,7 @@ const ENTRY_COLOR: Record<string, string> = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const uid = user?.id ?? "";
 

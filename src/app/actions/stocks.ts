@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { fetchUSDTWDForDate } from "@/lib/stock-utils";
 import { z } from "zod";
 
@@ -34,9 +34,7 @@ const TradeSchema = z.object({
 
 export async function createTrade(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = TradeSchema.safeParse({
@@ -77,9 +75,7 @@ export async function updateTrade(formData: FormData) {
   if (!id) return { ok: false as const, message: "缺少 ID。" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = TradeSchema.safeParse({
@@ -116,9 +112,7 @@ export async function updateTrade(formData: FormData) {
 export async function deleteTrade(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("stock_trades").delete().eq("user_id", user.id).eq("id", id);
@@ -128,9 +122,7 @@ export async function deleteTrade(formData: FormData) {
 
 export async function backfillUSFxRates(): Promise<{ updated: number; failed: number }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { updated: 0, failed: 0 };
 
   const { data: trades } = await supabase

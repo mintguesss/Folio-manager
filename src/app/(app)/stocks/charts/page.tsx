@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { fetchUSDTWD } from "@/lib/stock-utils";
 import { StockChartsPanel, type StockChartData } from "@/components/StockChartsPanel";
 
@@ -28,9 +28,7 @@ function key(m: string, s: string) {
 
 export default async function StockChartsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const usdtwd = await fetchUSDTWD();
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import { MobileNav } from "@/components/MobileNav";
+import { StaleGuard } from "@/components/StaleGuard";
 
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
@@ -20,12 +21,11 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   return (
     <div className="min-h-screen">
+      <StaleGuard />
       <header className="sticky top-0 z-10 border-b border-white/10 bg-black/30 backdrop-blur pt-[env(safe-area-inset-top)]">
         <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3">
           {/* Logo */}

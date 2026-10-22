@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { addFx, fmtFxBag, toTravelCurrency, type FxBag } from "@/lib/currency";
 import { createSplitGroup, deleteSplitGroup, acceptSplitGroupInvite } from "@/app/actions/split";
 import { SplitGroupForm } from "@/components/SplitGroupForm";
@@ -11,22 +11,26 @@ function fmt(n: number) {
 
 export default async function SplitPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
-  // Owned groups
-  const { data: ownedGroups } = await supabase
-    .from("split_groups")
-    .select("id, name, group_type, description, created_at")
-    .eq("user_id", user?.id ?? "")
-    .order("created_at", { ascending: false });
-
-  // Groups the user is a member of (not owner)
-  const { data: memberEntries } = await supabase
-    .from("split_group_users")
-    .select("group_id, split_groups(id, name, group_type, description, created_at)")
-    .eq("user_id", user?.id ?? "");
+  // 擁有的群組、被共享的群組、待接受的邀請彼此無關，同時查
+  const [{ data: ownedGroups }, { data: memberEntries }, { data: pendingInvites }] = await Promise.all([
+    supabase
+      .from("split_groups")
+      .select("id, name, group_type, description, created_at")
+      .eq("user_id", user?.id ?? "")
+      .order("created_at", { ascending: false }),
+    // Groups the user is a member of (not owner)
+    supabase
+      .from("split_group_users")
+      .select("group_id, split_groups(id, name, group_type, description, created_at)")
+      .eq("user_id", user?.id ?? ""),
+    // Pending invites for current user (requires RLS policy on split_group_invites)
+    supabase
+      .from("split_group_invites")
+      .select("id, group_id, split_groups(name, group_type)")
+      .eq("status", "pending"),
+  ]);
 
   const ownedIds = new Set((ownedGroups ?? []).map((g) => g.id));
   type GroupRow = { id: string; name: string; group_type: string; description: string | null; created_at: string };
@@ -37,12 +41,6 @@ export default async function SplitPage() {
       return row as GroupRow | null;
     })
     .filter((g): g is GroupRow => !!g && !ownedIds.has(g.id));
-
-  // Pending invites for current user (requires RLS policy on split_group_invites)
-  const { data: pendingInvites } = await supabase
-    .from("split_group_invites")
-    .select("id, group_id, split_groups(name, group_type)")
-    .eq("status", "pending");
 
   // Expense totals for all accessible groups
   const allGroupIds = [

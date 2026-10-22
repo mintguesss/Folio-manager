@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { inviteToSplitGroup, cancelSplitGroupInvite } from "@/app/actions/split";
 import { InviteMemberForm } from "@/components/InviteMemberForm";
 
@@ -11,9 +11,7 @@ export default async function GroupMembersPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [{ data: group }, { data: members }, { data: invites }, { data: groupUsers }] =
     await Promise.all([

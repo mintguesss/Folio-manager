@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { createSplitExpense } from "@/app/actions/split";
 import { SplitExpenseForm } from "@/components/SplitExpenseForm";
 import { toTravelCurrency } from "@/lib/currency";
@@ -12,9 +12,7 @@ export default async function NewExpensePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const { data: group } = await supabase
     .from("split_groups")

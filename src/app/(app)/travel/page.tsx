@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { TravelEntryForm } from "@/components/TravelEntryForm";
 import { TravelSummaryAccordion } from "@/components/TravelSummaryAccordion";
 import { TravelExpenseList } from "@/components/TravelExpenseList";
@@ -14,9 +14,7 @@ export default async function TravelPage({
   const { trip: tripParam } = await searchParams;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [{ data: rawExpenses }, { data: travelGroups }] = await Promise.all([
     supabase

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { fetchClose, syncQuotesForUser } from "@/lib/stock-utils";
 
@@ -15,9 +15,7 @@ const QuoteSchema = z.object({
 
 export async function upsertQuote(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false as const, message: "尚未登入。" };
 
   const parsed = QuoteSchema.safeParse({
@@ -44,9 +42,7 @@ export async function upsertQuote(formData: FormData) {
 export async function deleteQuote(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return;
 
   await supabase.from("stock_quotes").delete().eq("user_id", user.id).eq("id", id);
@@ -73,9 +69,7 @@ export async function fetchSingleQuote(
   message: string;
 }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return { ok: false, message: "尚未登入。" };
 
   const q = await fetchClose(market, symbol.toUpperCase());
