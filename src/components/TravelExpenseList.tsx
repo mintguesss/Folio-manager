@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { deleteTravelExpense } from "@/app/actions/travel";
+import { deleteTravelExpense, reorderTravelExpenses } from "@/app/actions/travel";
 import { DeleteButton } from "@/components/DeleteButton";
+import { SortableDayList } from "@/components/SortableDayList";
 import { addFx, fmtFx, fmtFxBag, type FxBag, type TravelCurrency } from "@/lib/currency";
 
 type TravelExpense = {
@@ -94,6 +95,9 @@ export function TravelExpenseList({ expenses }: { expenses: TravelExpense[] }) {
     [filtered]
   );
 
+  // 有篩選時只看到部分項目，不開放排序
+  const canReorder = catFilter === "all" && pmFilter === "all";
+
   const grouped = useMemo(() => {
     const m = new Map<string, TravelExpense[]>();
     for (const e of filtered) {
@@ -169,9 +173,13 @@ export function TravelExpenseList({ expenses }: { expenses: TravelExpense[] }) {
                   </svg>
                 </button>
                 {!isCollapsed && (
-                  <div className="divide-y divide-white/5">
-                    {entries.map(e => <ExpenseRow key={e.id} expense={e} />)}
-                  </div>
+                  <SortableDayList
+                    items={entries}
+                    enabled={canReorder}
+                    onReorder={reorderTravelExpenses}
+                    renderItem={e => <ExpenseRow expense={e} />}
+                    className="divide-y divide-white/5"
+                  />
                 )}
               </div>
             );

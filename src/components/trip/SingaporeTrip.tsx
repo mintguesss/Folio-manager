@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { M, Check, Bullet, TimedItem, SubHead, DayHeader, LocHead, TripHeader, TabBar, FilterPills } from "./shared";
 
 // ── Tab content sections ──────────────────────────────────────
@@ -287,9 +287,77 @@ function GiftSection() {
   );
 }
 
+// ── 回來之後：新加坡紀念 ──────────────────────────────────
+
+const RECAP: { day: number; date: string; title: string }[] = [
+  { day: 1, date: "10/21", title: "落地，深夜宵夜" },
+  { day: 2, date: "10/22", title: "小印度、甘榜格南、夜間動物園" },
+  { day: 3, date: "10/23", title: "換飯店、濱海灣燈光秀" },
+  { day: 4, date: "10/24", title: "環球影城、聖淘沙" },
+  { day: 5, date: "10/25", title: "牛車水、掃伴手禮" },
+  { day: 6, date: "10/26", title: "清晨飛回台灣" },
+];
+
+const BYE_MSGS = [
+  "去過了，打勾",
+  "夜間動物園看過了",
+  "環球影城玩過了",
+  "叻沙吃過了",
+  "海南雞飯吃過了",
+  "濱海灣的燈光秀在相簿裡",
+  "熱到這輩子都記得",
+  "EZ-Link 卡裡剩的錢就當紀念",
+  "伴手禮發完了沒",
+  "Grab 坐好坐滿",
+  "一次就夠，值得了",
+];
+
+function Day7Section() {
+  const day = useMemo(() => {
+    const now = new Date();
+    const t = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const today = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+    const start = Date.UTC(2026, 9, 27); // 2026-10-27
+    return Math.max(1, Math.floor((today - start) / 86400000) + 1);
+  }, []);
+
+  const msg = BYE_MSGS[(day - 1) % BYE_MSGS.length];
+
+  return (
+    <div className="space-y-4">
+      <DayHeader day={7} date="10/27～" title="新加坡，玩過了 📸" />
+      <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6 text-center">
+        <p className="text-6xl">🇸🇬</p>
+        <p className="mt-4 inline-block -rotate-3 rounded-lg border-2 border-emerald-400/60 px-3 py-1 text-sm font-bold tracking-widest text-emerald-300">
+          ✔ 已打卡
+        </p>
+        <div className="mt-5 flex items-baseline justify-center gap-3">
+          <span className="text-sm font-semibold text-zinc-500">回來後第</span>
+          <span className="text-6xl font-bold tabular-nums text-white leading-none">{day}</span>
+          <span className="text-2xl font-bold text-zinc-300">天</span>
+        </div>
+        <p className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400 italic">
+          「{msg}」
+        </p>
+      </div>
+
+      <SubHead>這 6 天</SubHead>
+      <div className="space-y-2">
+        {RECAP.map((r) => (
+          <div key={r.day} className="flex items-baseline gap-3 text-sm">
+            <span className="w-12 shrink-0 text-xs tabular-nums text-zinc-500">Day {r.day}</span>
+            <span className="w-11 shrink-0 text-xs tabular-nums text-zinc-500">{r.date}</span>
+            <span className="text-zinc-200">{r.title}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Tab definitions ───────────────────────────────────────────
 
-type TabId = "checklist" | "d1" | "d2" | "d3" | "d4" | "d5" | "d6" | "gift" | "food";
+type TabId = "checklist" | "d1" | "d2" | "d3" | "d4" | "d5" | "d6" | "d7" | "gift" | "food";
 
 function getDefaultTab(): TabId {
   const now = new Date();
@@ -301,7 +369,8 @@ function getDefaultTab(): TabId {
     const map: Record<number, TabId> = { 21: "d1", 22: "d2", 23: "d3", 24: "d4", 25: "d5", 26: "d6" };
     if (map[d]) return map[d];
   }
-  return "d1";
+  if (y < 2026 || (y === 2026 && (m < 10 || (m === 10 && d < 21)))) return "d1";
+  return "d7";
 }
 
 const TABS: { id: TabId; top: string; bottom: string }[] = [
@@ -312,6 +381,7 @@ const TABS: { id: TabId; top: string; bottom: string }[] = [
   { id: "d4", top: "Day 4", bottom: "10/24" },
   { id: "d5", top: "Day 5", bottom: "10/25" },
   { id: "d6", top: "Day 6", bottom: "10/26" },
+  { id: "d7", top: "📸", bottom: "回憶" },
   { id: "gift", top: "🎁", bottom: "伴手禮" },
   { id: "food", top: "🍜", bottom: "吃" },
 ];
@@ -324,6 +394,7 @@ const CONTENT: Record<TabId, React.ReactNode> = {
   d4: <Day4Section />,
   d5: <Day5Section />,
   d6: <Day6Section />,
+  d7: <Day7Section />,
   gift: <GiftSection />,
   food: <FoodSection />,
 };

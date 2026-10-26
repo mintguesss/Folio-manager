@@ -563,3 +563,27 @@ export async function settleAllGroupShares(
   revalidatePath(`/split/${group_id}`);
   return { ok: true };
 }
+
+// ── Reorder Expenses (同一天內的順序) ─────────────────────────
+
+const ReorderIds = z.array(z.string().uuid()).min(1).max(200);
+
+export async function reorderSplitExpenses(groupId: string, ids: string[]) {
+  const parsed = ReorderIds.safeParse(ids);
+  if (!parsed.success || !groupId) return { ok: false as const };
+
+  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return { ok: false as const };
+
+  // RLS 決定誰能改（群組擁有者與成員）
+  const results = await Promise.all(
+    parsed.data.map((id, i) =>
+      supabase.from("split_expenses").update({ sort_order: i }).eq("group_id", groupId).eq("id", id)
+    )
+  );
+  if (results.some((r) => r.error)) return { ok: false as const };
+
+  revalidatePath(`/split/${groupId}`);
+  return { ok: true as const };
+}

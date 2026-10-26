@@ -22,6 +22,7 @@ export default async function TravelPage({
       .select("id,trip_name,occurred_on,category,description,amount_jpy,currency,exchange_rate,payment_method,created_at")
       .eq("user_id", user?.id ?? "")
       .order("occurred_on", { ascending: false })
+      .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false }),
     // 出國分帳群組：名稱當行程名稱、帶出幣別
     supabase

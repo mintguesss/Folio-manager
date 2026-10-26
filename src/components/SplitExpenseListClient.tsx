@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { SplitExpenseCard } from "@/components/SplitExpenseCard";
+import { SortableDayList } from "@/components/SortableDayList";
+import { reorderSplitExpenses } from "@/app/actions/split";
 import { addFx, fmtFxBag, toTravelCurrency, type FxBag } from "@/lib/currency";
 
 type SplitExpense = {
@@ -101,6 +103,9 @@ export function SplitExpenseListClient({
     [filtered]
   );
 
+  // 有篩選時只看到部分項目，不開放排序
+  const canReorder = catFilter === "all" && pmFilter === "all" && payerFilter === "all";
+
   const grouped = useMemo(() => {
     const m = new Map<string, SplitExpense[]>();
     for (const e of filtered) {
@@ -176,10 +181,12 @@ export function SplitExpenseListClient({
                   </svg>
                 </button>
                 {!isCollapsed && (
-                  <div className="mt-1 space-y-3 pl-0">
-                    {dateExpenses.map(e => (
+                  <SortableDayList
+                    items={dateExpenses}
+                    enabled={canReorder}
+                    onReorder={ids => reorderSplitExpenses(groupId, ids)}
+                    renderItem={e => (
                       <SplitExpenseCard
-                        key={e.id}
                         expense={e}
                         shares={sharesByExpense.get(e.id) ?? []}
                         members={members}
@@ -187,8 +194,9 @@ export function SplitExpenseListClient({
                         isExported={exportedSet.has(e.id)}
                         selfMemberId={selfMemberId}
                       />
-                    ))}
-                  </div>
+                    )}
+                    className="mt-1 space-y-3 pl-0"
+                  />
                 )}
               </div>
             );

@@ -109,3 +109,26 @@ export async function deleteTravelExpense(formData: FormData) {
   revalidatePath("/travel");
   revalidatePath("/split", "layout");
 }
+
+// ── Reorder (同一天內的順序) ──────────────────────────────────
+
+const ReorderIds = z.array(z.string().uuid()).min(1).max(200);
+
+export async function reorderTravelExpenses(ids: string[]) {
+  const parsed = ReorderIds.safeParse(ids);
+  if (!parsed.success) return { ok: false as const };
+
+  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return { ok: false as const };
+
+  const results = await Promise.all(
+    parsed.data.map((id, i) =>
+      supabase.from("travel_expenses").update({ sort_order: i }).eq("user_id", user.id).eq("id", id)
+    )
+  );
+  if (results.some((r) => r.error)) return { ok: false as const };
+
+  revalidatePath("/travel");
+  return { ok: true as const };
+}

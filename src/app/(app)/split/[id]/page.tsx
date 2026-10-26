@@ -35,6 +35,7 @@ export default async function SplitGroupPage({
       .select("id, paid_by, description, amount, currency, expense_date, exchange_rate, category, note, payment_method, account, created_at")
       .eq("group_id", id)
       .order("expense_date", { ascending: false })
+      .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false }),
     supabase
       .from("split_group_users")
