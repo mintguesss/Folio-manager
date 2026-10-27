@@ -30,20 +30,20 @@ export default async function StockChartsPage() {
   const supabase = await createClient();
   const user = await getUser();
 
-  const usdtwd = await fetchUSDTWD();
-
-  const { data: tradesRaw } = await supabase
-    .from("stock_trades")
-    .select("market,symbol,side,quantity,price,fee,tax,currency,trade_date")
-    .eq("user_id", user?.id ?? "")
-    .order("trade_date", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  const { data: quotesRaw } = await supabase
-    .from("stock_quotes")
-    .select("market,symbol,quote_date,close,currency")
-    .eq("user_id", user?.id ?? "")
-    .order("quote_date", { ascending: true });
+  const [usdtwd, { data: tradesRaw }, { data: quotesRaw }] = await Promise.all([
+    fetchUSDTWD(),
+    supabase
+      .from("stock_trades")
+      .select("market,symbol,side,quantity,price,fee,tax,currency,trade_date")
+      .eq("user_id", user?.id ?? "")
+      .order("trade_date", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("stock_quotes")
+      .select("market,symbol,quote_date,close,currency")
+      .eq("user_id", user?.id ?? "")
+      .order("quote_date", { ascending: true }),
+  ]);
 
   const trades: Trade[] = (tradesRaw ?? []).map((t) => ({
     market: t.market as "TW" | "US",

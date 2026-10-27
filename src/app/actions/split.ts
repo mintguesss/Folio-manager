@@ -406,7 +406,6 @@ export async function exportSplitToLedger(formData: FormData) {
     });
     if (error) return { ok: false as const, message: error.message };
     revalidatePath("/ledger");
-    revalidatePath("/dashboard");
   }
 
   revalidatePath(`/split/${expense.group_id}`);

@@ -42,7 +42,6 @@ export async function createLedgerEntry(formData: FormData) {
   if (error) return { ok: false as const, message: error.message };
 
   revalidatePath("/ledger");
-  revalidatePath("/dashboard");
   return { ok: true as const, message: "已新增。" };
 }
 
@@ -74,7 +73,6 @@ export async function updateLedgerEntry(formData: FormData) {
   if (error) return { ok: false as const, message: error.message };
 
   revalidatePath("/ledger");
-  revalidatePath("/dashboard");
   redirect("/ledger");
 }
 
@@ -86,6 +84,5 @@ export async function deleteLedgerEntry(formData: FormData) {
 
   await supabase.from("ledger_entries").delete().eq("user_id", user.id).eq("id", id);
   revalidatePath("/ledger");
-  revalidatePath("/dashboard");
   revalidatePath("/split", "layout");
 }

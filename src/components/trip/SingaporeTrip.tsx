@@ -289,28 +289,42 @@ function GiftSection() {
 
 // ── 回來之後：新加坡紀念 ──────────────────────────────────
 
-const RECAP: { day: number; date: string; title: string }[] = [
-  { day: 1, date: "10/21", title: "落地，深夜宵夜" },
-  { day: 2, date: "10/22", title: "小印度、甘榜格南、夜間動物園" },
-  { day: 3, date: "10/23", title: "換飯店、濱海灣燈光秀" },
-  { day: 4, date: "10/24", title: "環球影城、聖淘沙" },
-  { day: 5, date: "10/25", title: "牛車水、掃伴手禮" },
-  { day: 6, date: "10/26", title: "清晨飛回台灣" },
+/** 遊記裡的片段，每天輪一則 */
+const MEMORIES: { day: number; text: string }[] = [
+  { day: 1, text: "出關超快，直奔 Jewel，剛好趕上雨漩渦看到關水" },
+  { day: 2, text: "早餐的拉茶和 dosa，滿滿香料味完全吃不下" },
+  { day: 3, text: "輪盤快輸光時，連中三把 8 倍" },
+  { day: 4, text: "環球影城人超少，還好沒買快速通關" },
+  { day: 1, text: "買 EZ-Link 卡時，下意識說了一句「はい」" },
+  { day: 2, text: "Mustafa Centre 一路逛，掃拉麵和飲料" },
+  { day: 3, text: "超市的拉麵比小印度便宜 3.55，氣死" },
+  { day: 4, text: "玩完木乃伊就怕了，雲霄飛車不敢上" },
+  { day: 1, text: "隔壁房跑來借刀，切一根超大香腸" },
+  { day: 2, text: "哈芝巷的牛肉餅和炒飯還不錯" },
+  { day: 3, text: "6 塊的草莓牛奶超好喝" },
+  { day: 4, text: "水世界表演真不錯，下次坐前面（但會全濕）" },
+  { day: 1, text: "冒出一隻蟑螂，叫人來抓，順便升級房間" },
+  { day: 2, text: "蘇丹回教堂裡面很漂亮，但空空的" },
+  { day: 3, text: "走去 F1 超遠，結果進不去 🫤" },
+  { day: 4, text: "滑坡車上去的纜車好恐怖，可惜只能玩三趟" },
+  { day: 1, text: "升級完打開窗戶是墓園，床對面還有一面超大鏡子" },
+  { day: 2, text: "Grab 去夜間動物園，車上睡得超爽" },
+  { day: 3, text: "松發肉骨茶好吃到再買盒裝帶回去" },
+  { day: 4, text: "在 Google 攤位拿到帽子和小電風扇" },
+  { day: 1, text: "洗澡每個角度都超燙，換個出水模式就好了，這啥" },
+  { day: 2, text: "遊園車看到白虎、大象，還有一些根本不知道是什麼" },
+  { day: 3, text: "擎天樹燈光秀和水舞，錄影拍不出現場的震撼" },
+  { day: 4, text: "搭免費捷運去海邊看海、吃 Shake Shack" },
+  { day: 1, text: "拿出御守擋一下，然後太累秒睡" },
+  { day: 2, text: "步道說一小時，實際兩小時還迷路，最後狂飆趕表演" },
+  { day: 3, text: "差 5 塊就回本，上頭全輸光" },
+  { day: 4, text: "最後一杯 Mr Coconut 收尾" },
+  { day: 2, text: "動物表演主持人帶得超好，兩萬多步腳好痛" },
+  { day: 3, text: "賭桌旁一個超臭的屁，還以為誰拉屎了 💀" },
+  { day: 3, text: "贏的錢剛好拿去付 20 塊的 Grab" },
 ];
 
-const BYE_MSGS = [
-  "去過了，打勾",
-  "夜間動物園看過了",
-  "環球影城玩過了",
-  "叻沙吃過了",
-  "海南雞飯吃過了",
-  "濱海灣的燈光秀在相簿裡",
-  "熱到這輩子都記得",
-  "EZ-Link 卡裡剩的錢就當紀念",
-  "伴手禮發完了沒",
-  "Grab 坐好坐滿",
-  "一次就夠，值得了",
-];
+const MEMORY_DATE: Record<number, string> = { 1: "10/21", 2: "10/22", 3: "10/23", 4: "10/24", 5: "10/25", 6: "10/26" };
 
 function Day7Section() {
   const day = useMemo(() => {
@@ -321,7 +335,7 @@ function Day7Section() {
     return Math.max(1, Math.floor((today - start) / 86400000) + 1);
   }, []);
 
-  const msg = BYE_MSGS[(day - 1) % BYE_MSGS.length];
+  const mem = MEMORIES[(day - 1) % MEMORIES.length];
 
   return (
     <div className="space-y-4">
@@ -336,20 +350,12 @@ function Day7Section() {
           <span className="text-6xl font-bold tabular-nums text-white leading-none">{day}</span>
           <span className="text-2xl font-bold text-zinc-300">天</span>
         </div>
-        <p className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400 italic">
-          「{msg}」
-        </p>
-      </div>
-
-      <SubHead>這 6 天</SubHead>
-      <div className="space-y-2">
-        {RECAP.map((r) => (
-          <div key={r.day} className="flex items-baseline gap-3 text-sm">
-            <span className="w-12 shrink-0 text-xs tabular-nums text-zinc-500">Day {r.day}</span>
-            <span className="w-11 shrink-0 text-xs tabular-nums text-zinc-500">{r.date}</span>
-            <span className="text-zinc-200">{r.title}</span>
-          </div>
-        ))}
+        <div className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+          <p className="text-xs tabular-nums text-zinc-500">
+            📍 Day {mem.day} · {MEMORY_DATE[mem.day]}
+          </p>
+          <p className="mt-1.5 text-sm text-zinc-300 italic">「{mem.text}」</p>
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
+import { MAIN_NAV, TRIP_NAV, canSeeTrip } from "@/lib/nav";
 import { signOut } from "@/app/actions/auth";
 import { MobileNav } from "@/components/MobileNav";
 import { StaleGuard } from "@/components/StaleGuard";
+import { MoreMenu } from "@/components/MoreMenu";
 
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
@@ -20,8 +22,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
   const user = await getUser();
+  const showTrip = canSeeTrip(user?.email);
+  const mainNav = showTrip ? [...MAIN_NAV, TRIP_NAV] : MAIN_NAV;
 
   return (
     <div className="min-h-screen">
@@ -38,16 +41,8 @@ export default async function AppLayout({
 
           {/* Nav — centered */}
           <div className="hidden items-center justify-center gap-1 sm:flex">
-            <NavLink href="/dashboard" label="總覽" />
-            <NavLink href="/networth" label="資產記帳" />
-            <NavLink href="/stocks" label="股票記帳" />
-            <NavLink href="/ledger" label="一般記帳" />
-            <NavLink href="/travel" label="出國記帳" />
-            <NavLink href="/split" label="分帳" />
-            <NavLink href="/spending" label="統計" />
-            {["a03111006@gmail.com", "xuziwei04@gmail.com", "yuyu09170917yuyu@gmail.com"].includes(user?.email ?? "") && (
-              <NavLink href="/trip" label="行程" />
-            )}
+            {mainNav.map((i) => <NavLink key={i.href} href={i.href} label={i.label} />)}
+            <MoreMenu />
           </div>
 
           {/* Right side */}
@@ -65,7 +60,7 @@ export default async function AppLayout({
                 登出
               </button>
             </form>
-            <MobileNav showTrip={["a03111006@gmail.com", "xuziwei04@gmail.com", "yuyu09170917yuyu@gmail.com"].includes(user?.email ?? "")} />
+            <MobileNav showTrip={showTrip} />
           </div>
         </div>
       </header>

@@ -14,15 +14,8 @@ export default async function EditExpensePage({
   const supabase = await createClient();
   const user = await getUser();
 
-  const { data: group } = await supabase
-    .from("split_groups")
-    .select("id, name, group_type, currency")
-    .eq("id", id)
-    .single();
-
-  if (!group) notFound();
-
-  const [{ data: expense }, { data: members }, { data: shares }, { data: myGroupUserRows }] = await Promise.all([
+  const [{ data: group }, { data: expense }, { data: members }, { data: shares }, { data: myGroupUserRows }] = await Promise.all([
+    supabase.from("split_groups").select("id, name, group_type, currency").eq("id", id).single(),
     supabase
       .from("split_expenses")
       .select("id, paid_by, description, amount, currency, expense_date, exchange_rate, split_type, category, payment_method, category_text, account, counterparty, note")
@@ -40,6 +33,8 @@ export default async function EditExpensePage({
       .eq("expense_id", expenseId),
     supabase.from("split_group_users").select("member_id").eq("group_id", id).eq("user_id", user?.id ?? "").limit(1),
   ]);
+
+  if (!group) notFound();
 
   if (!expense || !members) notFound();
 

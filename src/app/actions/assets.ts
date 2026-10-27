@@ -69,7 +69,6 @@ export async function upsertAssetSnapshot(formData: FormData) {
 
   revalidatePath("/assets");
   revalidatePath("/networth");
-  revalidatePath("/dashboard");
   return { ok: true as const, message: "已儲存。" };
 }
 
@@ -90,7 +89,6 @@ export async function deleteAssetSnapshot(formData: FormData) {
 
   revalidatePath("/assets");
   revalidatePath("/networth");
-  revalidatePath("/dashboard");
   return;
 }
 

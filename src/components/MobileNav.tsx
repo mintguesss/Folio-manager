@@ -2,28 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-
-const BASE_LINKS = [
-  { href: "/dashboard", label: "總覽" },
-  { href: "/networth", label: "資產記帳" },
-  { href: "/stocks", label: "股票記帳" },
-  { href: "/ledger", label: "一般記帳" },
-  { href: "/travel", label: "出國記帳" },
-  { href: "/split", label: "分帳" },
-  { href: "/spending", label: "統計" },
-];
+import { MAIN_NAV, MORE_NAV, TRIP_NAV } from "@/lib/nav";
 
 export function MobileNav({ showTrip = false }: { showTrip?: boolean }) {
-  const links = showTrip ? [...BASE_LINKS, { href: "/trip", label: "行程" }] : BASE_LINKS;
+  const links = showTrip ? [...MAIN_NAV, TRIP_NAV] : MAIN_NAV;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
-
-  // Close on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   // Close on outside click
   useEffect(() => {
@@ -85,6 +69,18 @@ export function MobileNav({ showTrip = false }: { showTrip?: boolean }) {
               <Link
                 key={href}
                 href={href}
+                onClick={() => setOpen(false)}
+                className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-200 hover:bg-white/5 transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+            <div className="mx-3 mt-2 border-t border-white/10 pt-2 text-[11px] font-semibold text-zinc-500">其他</div>
+            {MORE_NAV.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
                 className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-200 hover:bg-white/5 transition-colors"
               >
                 {label}

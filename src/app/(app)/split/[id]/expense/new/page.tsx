@@ -14,18 +14,13 @@ export default async function NewExpensePage({
   const supabase = await createClient();
   const user = await getUser();
 
-  const { data: group } = await supabase
-    .from("split_groups")
-    .select("id, name, group_type, currency")
-    .eq("id", id)
-    .single();
-
-  if (!group) notFound();
-
-  const [{ data: members }, { data: myGroupUserRows }] = await Promise.all([
+  const [{ data: group }, { data: members }, { data: myGroupUserRows }] = await Promise.all([
+    supabase.from("split_groups").select("id, name, group_type, currency").eq("id", id).single(),
     supabase.from("split_members").select("id, name, is_self").eq("group_id", id).order("sort_order"),
     supabase.from("split_group_users").select("member_id").eq("group_id", id).eq("user_id", user?.id ?? "").limit(1),
   ]);
+
+  if (!group) notFound();
 
   if (!members || members.length === 0) notFound();
 
