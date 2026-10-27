@@ -72,7 +72,7 @@ export function TravelEntryForm({
   const info = CURRENCY_INFO[currency];
   const isTwd = currency === "TWD";
 
-  // 已知行程只給該行程的外幣 + 台幣（新加坡行程不會出現 JPY）；新行程才列全部
+  // 已知行程只給該行程的外幣 + 台幣；新行程才列全部
   const tripCurrency = tripCurrencies[tripValue];
   const currencyOptions: TravelCurrency[] = tripCurrency
     ? Array.from(new Set<TravelCurrency>([tripCurrency, "TWD", currency]))

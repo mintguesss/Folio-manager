@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { inviteToSplitGroup, cancelSplitGroupInvite } from "@/app/actions/split";
 import { InviteMemberForm } from "@/components/InviteMemberForm";
+import { DeleteButton } from "@/components/DeleteButton";
 
 export default async function GroupMembersPage({
   params,
@@ -107,12 +108,11 @@ export default async function GroupMembersPage({
                 <form action={cancelSplitGroupInvite} className="mt-2">
                   <input type="hidden" name="invite_id" value={invite.id} />
                   <input type="hidden" name="group_id" value={id} />
-                  <button
-                    type="submit"
+                  <DeleteButton
+                    label="取消邀請"
+                    confirmLabel="確定取消邀請？"
                     className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
-                  >
-                    取消邀請
-                  </button>
+                  />
                 </form>
               )}
 

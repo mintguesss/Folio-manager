@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { deleteQuote, syncLatestQuotes } from "@/app/actions/quotes";
+import { DeleteButton } from "@/components/DeleteButton";
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 6 }).format(n);
@@ -123,9 +124,7 @@ export default async function QuotesPage({
                   <td className="px-3 py-2 text-right">
                     <form action={deleteQuote}>
                       <input type="hidden" name="id" value={q.id} />
-                      <button className="rounded-lg px-2 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/10">
-                        刪除
-                      </button>
+                      <DeleteButton />
                     </form>
                   </td>
                 </tr>

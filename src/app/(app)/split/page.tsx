@@ -167,7 +167,7 @@ export default async function SplitPage() {
                   </Link>
                   <form action={deleteSplitGroup}>
                     <input type="hidden" name="id" value={g.id} />
-                    <DeleteButton />
+                    <DeleteButton confirmLabel="刪除整個群組？" />
                   </form>
                 </>
               )}

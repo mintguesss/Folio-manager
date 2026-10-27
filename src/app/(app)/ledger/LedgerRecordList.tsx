@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { deleteLedgerEntry } from "@/app/actions/ledger";
+import { DeleteButton } from "@/components/DeleteButton";
 
 export type LedgerEntry = {
   id: string;
@@ -117,9 +118,7 @@ export function LedgerRecordList({ entries }: { entries: LedgerEntry[] }) {
                       </Link>
                       <form action={deleteLedgerEntry}>
                         <input type="hidden" name="id" value={e.id} />
-                        <button className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300">
-                          刪除
-                        </button>
+                        <DeleteButton className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300" />
                       </form>
                     </div>
                   </div>
@@ -177,9 +176,7 @@ export function LedgerRecordList({ entries }: { entries: LedgerEntry[] }) {
                       </Link>
                       <form action={deleteLedgerEntry}>
                         <input type="hidden" name="id" value={e.id} />
-                        <button className="rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300">
-                          刪除
-                        </button>
+                        <DeleteButton className="rounded-lg px-2 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300" />
                       </form>
                     </div>
                   </td>
