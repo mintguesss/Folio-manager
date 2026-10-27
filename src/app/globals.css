@@ -25,3 +25,121 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
     Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
+
+/* ── 首頁 ─────────────────────────────────────────────────────
+   動畫只用 transform / opacity（交給 GPU），光暈用 CSS 變數，不用 JS 逐格算 */
+
+/* 進場用獨立的 translate，才不會蓋掉卡片傾斜用的 transform */
+@keyframes home-rise {
+  from { opacity: 0; translate: 0 14px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes home-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, 20px) scale(1.1); }
+  66%      { transform: translate(-30px, 30px) scale(0.95); }
+}
+@keyframes home-shine {
+  to { background-position: 200% center; }
+}
+@keyframes home-bob {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  30%      { transform: translateY(-6px) rotate(-8deg); }
+  60%      { transform: translateY(-2px) rotate(6deg); }
+}
+
+.home-rise {
+  animation: home-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.home-orb {
+  position: absolute;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--c), transparent 65%);
+  animation: home-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.home-shine {
+  background: linear-gradient(90deg, #fff 0%, #a5b4fc 25%, #67e8f9 50%, #fff 75%, #a5b4fc 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: home-shine 6s linear infinite;
+}
+
+.home-mood {
+  display: inline-block;
+  cursor: pointer;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.home-tile {
+  --mx: 50%;
+  --my: 50%;
+  --rx: 0deg;
+  --ry: 0deg;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  padding: 1.1rem 1.15rem;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+    rgba(0, 0, 0, 0.35);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.25s ease-out, border-color 0.3s, box-shadow 0.3s;
+  animation: home-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+  -webkit-tap-highlight-color: transparent;
+}
+.home-tile:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 12px 40px -12px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.home-tile:active {
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry)) scale(0.97);
+  transition-duration: 0.08s;
+}
+
+/* 跟著游標 / 手指的光暈 */
+.home-tile-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(220px circle at var(--mx) var(--my), color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%);
+  transition: opacity 0.3s;
+}
+.home-tile:hover .home-tile-glow,
+.home-tile:active .home-tile-glow {
+  opacity: 1;
+}
+
+.home-emoji {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.9rem;
+  font-size: 1.5rem;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.home-tile:hover .home-emoji {
+  animation: home-bob 0.7s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-rise, .home-tile, .home-orb, .home-shine, .home-tile:hover .home-emoji {
+    animation: none !important;
+  }
+  .home-tile { transform: none !important; }
+}
