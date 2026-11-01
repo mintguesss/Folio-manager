@@ -9,6 +9,7 @@ function isPublicPath(pathname: string) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/api/health") ||
+    pathname === "/api/ingest" ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname.startsWith("/workbox-")

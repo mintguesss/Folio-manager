@@ -5,8 +5,8 @@ import { Combobox } from "@/components/Combobox";
 
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
 
-const PAYMENT_OPTIONS = ["現金", "LinePay", "華南銀行", "中國信託"];
-const CATEGORY_OPTIONS = ["早餐", "午餐", "晚餐", "點心", "交通", "網購", "購物"];
+export const PAYMENT_OPTIONS = ["現金", "LinePay", "華南銀行", "中國信託"];
+export const CATEGORY_OPTIONS = ["早餐", "午餐", "晚餐", "點心", "交通", "網購", "購物"];
 
 type Initial = {
   id: string;
