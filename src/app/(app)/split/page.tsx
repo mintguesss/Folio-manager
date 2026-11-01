@@ -167,7 +167,7 @@ export default async function SplitPage() {
                   </Link>
                   <form action={deleteSplitGroup}>
                     <input type="hidden" name="id" value={g.id} />
-                    <DeleteButton confirmLabel="刪除整個群組？" />
+                    <DeleteButton confirmLabel="刪除整個群組？" message="群組裡的支出和分攤紀錄都會一起刪掉。" />
                   </form>
                 </>
               )}

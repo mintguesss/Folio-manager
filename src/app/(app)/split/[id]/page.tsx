@@ -247,10 +247,12 @@ export default async function SplitGroupPage({
                 <input type="hidden" name="group_id" value={id} />
                 <DeleteButton
                   label={`全部上傳到${typeLabel}記帳（${exportable} 筆）`}
-                  confirmLabel={`確定上傳 ${exportable} 筆？`}
+                  confirmLabel={`上傳 ${exportable} 筆到${typeLabel}記帳？`}
+                  message="會把你那份已結清、還沒上傳過的支出全部記進去。"
+                  confirmText="上傳"
                   pendingLabel="上傳中…"
                   className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
-                  armedClassName="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-sky-500/20"
+                  armedClassName="bg-sky-500 shadow-sky-500/30 hover:bg-sky-400"
                 />
               </form>
             )}

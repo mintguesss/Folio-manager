@@ -111,6 +111,8 @@ export default async function GroupMembersPage({
                   <DeleteButton
                     label="取消邀請"
                     confirmLabel="確定取消邀請？"
+                    confirmText="取消邀請"
+                    pendingLabel="處理中…"
                     className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
                   />
                 </form>
