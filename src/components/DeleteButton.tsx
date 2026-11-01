@@ -35,6 +35,7 @@ export function DeleteButton({
   if (armed) {
     return (
       <button
+        key="confirm"
         type="submit"
         className={armedClassName}
       >
@@ -45,8 +46,12 @@ export function DeleteButton({
 
   return (
     <button
+      key="arm"
       type="button"
       onClick={(e) => {
+        // React 會沿用同一顆 <button>、在這次點擊還沒結束前就把 type 改成 submit，
+        // 瀏覽器接著就把表單送出了。擋掉預設動作，並用不同 key 讓兩顆按鈕是不同元素。
+        e.preventDefault();
         e.stopPropagation();
         setArmed(true);
         clearTimeout(timer.current);
