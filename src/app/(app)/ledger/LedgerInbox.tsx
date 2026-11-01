@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
+import { useFormStatus } from "react-dom";
 import { Combobox } from "@/components/Combobox";
 import { acceptInboxItem, acceptKnownInbox, createIngestToken, ignoreInboxItem } from "@/app/actions/ledger";
 import { CATEGORY_OPTIONS, PAYMENT_OPTIONS } from "./LedgerEntryForm";
@@ -30,9 +31,17 @@ function InboxCard({ item, rule, categories }: { item: InboxItem; rule?: Merchan
   const [account, setAccount] = useState(item.account ?? rule?.account ?? "");
   const [showRaw, setShowRaw] = useState(false);
   const [state, action, pending] = useActionState<Result, FormData>((_p, fd) => acceptInboxItem(fd), undefined);
+  const [ignoring, startIgnore] = useTransition();
+  const busy = pending || ignoring;
+
+  function ignore() {
+    const fd = new FormData();
+    fd.set("id", item.id);
+    startIgnore(() => ignoreInboxItem(fd));
+  }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+    <div className={["rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-opacity", busy ? "pointer-events-none opacity-50" : ""].join(" ")}>
       <form action={action} className="space-y-2.5">
         <input type="hidden" name="id" value={item.id} />
         <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -76,17 +85,30 @@ function InboxCard({ item, rule, categories }: { item: InboxItem; rule?: Merchan
           </button>
           {state && !state.ok && <span className="text-xs text-rose-400">{state.message}</span>}
           <button
-            type="submit"
-            formAction={ignoreInboxItem}
-            formNoValidate
-            className="ml-auto rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+            type="button"
+            onClick={ignore}
+            disabled={busy}
+            className="ml-auto rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-white/5 hover:text-zinc-300 active:scale-95"
           >
-            不記
+            {ignoring ? "處理中…" : "不記"}
           </button>
         </div>
       </form>
       {showRaw && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-black/30 p-2 text-[11px] text-zinc-400">{item.raw_text}</p>}
     </div>
+  );
+}
+
+function AcceptKnownButton({ count }: { count: number }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-60"
+    >
+      {pending ? "入帳中…" : `認得的 ${count} 筆直接入帳`}
+    </button>
   );
 }
 
@@ -195,9 +217,7 @@ export function LedgerInbox({
             <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs text-sky-300">{items.length} 筆</span>
             {knownCount > 0 && (
               <form action={acceptKnownInbox} className="ml-auto">
-                <button type="submit" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
-                  認得的 {knownCount} 筆直接入帳
-                </button>
+                <AcceptKnownButton count={knownCount} />
               </form>
             )}
           </div>
