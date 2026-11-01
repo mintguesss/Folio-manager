@@ -49,6 +49,9 @@ function clean(s: string) {
 export function parseNotification(title: string, text: string): ParsedNotification | null {
   const body = `${title}\n${text}`;
   if (!PAY_WORDS.test(body) || SKIP_WORDS.test(body)) return null;
+  // 通知標題（傳訊息的帳號）要是銀行 / LINE Pay 官方帳號，朋友傳的聊天訊息不收
+  const account = ACCOUNT_RULES.find(([re]) => re.test(title))?.[1];
+  if (!account) return null;
 
   let amount: number | null = null;
   for (const re of AMOUNT_PATTERNS) {
@@ -72,8 +75,6 @@ export function parseNotification(title: string, text: string): ParsedNotificati
       break;
     }
   }
-
-  const account = ACCOUNT_RULES.find(([re]) => re.test(body))?.[1] ?? null;
 
   return { amount, merchant, account };
 }
