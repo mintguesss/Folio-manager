@@ -1,7 +1,7 @@
 -- ============================================================
 -- 一般記帳：同一筆消費的兩則通知合併
 --   例如 LINE Pay 綁信用卡付款，會同時收到 LINE Pay 和銀行的通知。
---   10 分鐘內、同金額、不同來源 → 視為同一筆：
+--   1 分鐘內、同金額、不同來源 → 視為同一筆：
 --     還在待確認 → 併進原本那筆（補商店名稱、原文接在後面）
 --     已入帳 / 不記 → 直接略過
 -- Safe to re-run. Run in Supabase SQL Editor.
@@ -41,14 +41,14 @@ begin
     return 'duplicate';
   end if;
 
-  -- 同一筆消費的另一則通知（不同來源、同金額、10 分鐘內）
+  -- 同一筆消費的另一則通知（不同來源、同金額、1 分鐘內）
   if p_amount is not null then
     select * into v_twin
     from public.ledger_inbox
     where user_id = v_user
       and amount = p_amount
       and coalesce(source, '') <> coalesce(p_source, '')
-      and received_at > now() - interval '10 minutes'
+      and received_at > now() - interval '1 minute'
     order by received_at desc
     limit 1;
 
