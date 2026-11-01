@@ -137,6 +137,28 @@ body {
   animation: home-bob 0.7s ease-in-out;
 }
 
+/* 首頁右上的小星系 */
+.home-orbit { --orbit-r: -3rem; }
+@media (min-width: 640px) { .home-orbit { --orbit-r: -4rem; } }
+@keyframes home-spin { to { rotate: 360deg; } }
+.home-orbit-ring { animation: home-spin 24s linear infinite; }
+/* 表情反向轉，保持正立 */
+.home-orbit-item { display: inline-block; animation: home-spin 24s linear infinite reverse; }
+
+/* 閃爍的小星星 */
+@keyframes home-twinkle {
+  0%, 100% { opacity: 0.15; scale: 0.6; }
+  50%      { opacity: 0.9;  scale: 1; }
+}
+.home-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  animation: home-twinkle 3s ease-in-out infinite;
+}
+
 /* 其他頁的進場：頁面裡的區塊依序浮上來。
    只用 backwards，播完不留 translate，不影響裡面 fixed 的彈窗 */
 .page-enter > * > * {
@@ -151,6 +173,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .page-enter > * > *,
+  .home-orbit-ring, .home-orbit-item, .home-star,
   .home-rise, .home-tile, .home-orb, .home-shine, .home-tile:hover .home-emoji {
     animation: none !important;
   }

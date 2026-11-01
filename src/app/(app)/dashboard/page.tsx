@@ -24,5 +24,5 @@ export default async function HomePage() {
   const t = taipeiNow();
   const dateLabel = `${t.getUTCMonth() + 1} 月 ${t.getUTCDate()} 日・星期${WEEK[t.getUTCDay()]}`;
 
-  return <HomeView greeting={greetingOf(t.getUTCHours())} dateLabel={dateLabel} items={items} more={MORE_NAV} />;
+  return <HomeView greeting={greetingOf(t.getUTCHours())} dateLabel={dateLabel} dayIndex={Math.floor(t.getTime() / 86_400_000)} items={items} more={MORE_NAV} />;
 }
