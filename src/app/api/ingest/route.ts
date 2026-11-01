@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
 
   const { title, text } = await readFields(req);
   const parsed = parseNotification(title, text);
-  if (!parsed) return NextResponse.json({ ok: true, skipped: true });
+  // 回傳收到的內容，方便在手機上看為什麼被跳過
+  if (!parsed) return NextResponse.json({ ok: true, skipped: true, got: { title, text } });
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { persistSession: false },
