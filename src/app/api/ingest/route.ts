@@ -55,5 +55,6 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ ok: false, error: "db" }, { status: 500 });
   if (data === "bad_token") return NextResponse.json({ ok: false, error: "bad key" }, { status: 401 });
-  return NextResponse.json({ ok: true, amount: parsed.amount, merchant: parsed.merchant });
+  // merged：和另一則通知是同一筆消費（例如 LINE Pay + 銀行），已併在一起
+  return NextResponse.json({ ok: true, result: data, amount: parsed.amount, merchant: parsed.merchant });
 }
