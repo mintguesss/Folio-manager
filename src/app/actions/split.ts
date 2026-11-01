@@ -412,6 +412,75 @@ export async function exportSplitToLedger(formData: FormData) {
   return { ok: true as const, message: "已新增到記帳。" };
 }
 
+/** 群組裡「我那份已結清、還沒上傳」的支出一次全部上傳到記帳 */
+export async function exportAllSplitToLedger(formData: FormData) {
+  const groupId = String(formData.get("group_id") ?? "");
+  if (!groupId) return;
+
+  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return;
+
+  const [{ data: group }, { data: expenses }, { data: myGroupUserRows }, { data: selfByFlag }] = await Promise.all([
+    supabase.from("split_groups").select("id, name, group_type").eq("id", groupId).single(),
+    supabase
+      .from("split_expenses")
+      .select("id, description, currency, expense_date, exchange_rate, category, payment_method, category_text, account, counterparty, note")
+      .eq("group_id", groupId),
+    supabase.from("split_group_users").select("member_id").eq("group_id", groupId).eq("user_id", user.id).limit(1),
+    supabase.from("split_members").select("id").eq("group_id", groupId).eq("is_self", true).limit(1),
+  ]);
+  const selfMemberId = myGroupUserRows?.[0]?.member_id ?? selfByFlag?.[0]?.id;
+  if (!group || !expenses?.length || !selfMemberId) return;
+
+  const ids = expenses.map((e) => e.id);
+  const [{ data: myShares }, { data: doneTravel }, { data: doneLedger }] = await Promise.all([
+    supabase.from("split_shares").select("expense_id, share_amount").eq("member_id", selfMemberId).eq("is_settled", true).in("expense_id", ids),
+    supabase.from("travel_expenses").select("split_expense_id").eq("user_id", user.id).in("split_expense_id", ids),
+    supabase.from("ledger_entries").select("split_expense_id").eq("user_id", user.id).in("split_expense_id", ids),
+  ]);
+  const done = new Set([...(doneTravel ?? []), ...(doneLedger ?? [])].map((r) => r.split_expense_id as string));
+  const shareOf = new Map((myShares ?? []).map((s) => [s.expense_id as string, Number(s.share_amount)]));
+  const todo = expenses.filter((e) => !done.has(e.id) && (shareOf.get(e.id) ?? 0) > 0);
+  if (todo.length === 0) return;
+
+  if (group.group_type === "travel") {
+    const rows = todo
+      .filter((e) => e.exchange_rate)
+      .map((e) => ({
+        user_id: user.id,
+        trip_name: group.name,
+        occurred_on: e.expense_date,
+        category: e.category ?? "其他",
+        description: e.description ?? null,
+        amount_jpy: shareOf.get(e.id)!,
+        currency: e.currency,
+        exchange_rate: Number(e.exchange_rate),
+        payment_method: e.payment_method ?? null,
+        split_expense_id: e.id,
+      }));
+    if (rows.length) await supabase.from("travel_expenses").insert(rows);
+    revalidatePath("/travel");
+  } else {
+    await supabase.from("ledger_entries").insert(
+      todo.map((e) => ({
+        user_id: user.id,
+        occurred_on: e.expense_date,
+        entry_type: "expense",
+        amount: shareOf.get(e.id)!,
+        currency: "TWD",
+        account: e.account ?? null,
+        category_text: e.category_text ?? null,
+        counterparty: e.counterparty ?? null,
+        memo: e.description ?? e.note ?? null,
+        split_expense_id: e.id,
+      }))
+    );
+    revalidatePath("/ledger");
+  }
+  revalidatePath(`/split/${groupId}`);
+}
+
 // ── Toggle Share Settlement ───────────────────────────────────
 
 export async function toggleSplitShare(formData: FormData) {

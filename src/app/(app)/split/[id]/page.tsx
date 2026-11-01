@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { SettlementModal } from "@/components/SettlementModal";
+import { DeleteButton } from "@/components/DeleteButton";
+import { exportAllSplitToLedger } from "@/app/actions/split";
 import { SplitExpenseListClient } from "@/components/SplitExpenseListClient";
 import { fmtFx, toTravelCurrency } from "@/lib/currency";
 
@@ -115,6 +117,14 @@ export default async function SplitGroupPage({
     .filter((d) => d.fx > 0.005 || d.twd > 0.005);
 
   const typeLabel = group.group_type === "travel" ? "出國" : "一般";
+
+  // 我那份已結清、還沒上傳的筆數（出國要有匯率才能上傳）
+  const exportable = (expenses ?? []).filter((e) => {
+    if (exportedIds.has(e.id)) return false;
+    if (group.group_type === "travel" && !e.exchange_rate) return false;
+    const mine = (sharesByExpense.get(e.id) ?? []).find((s) => s.member_id === selfMemberId);
+    return !!mine && mine.is_settled && Number(mine.share_amount) > 0;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -230,7 +240,21 @@ export default async function SplitGroupPage({
         </p>
       ) : (
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-zinc-300">支出明細</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-zinc-300">支出明細</h2>
+            {exportable > 0 && (
+              <form action={exportAllSplitToLedger}>
+                <input type="hidden" name="group_id" value={id} />
+                <DeleteButton
+                  label={`全部上傳到${typeLabel}記帳（${exportable} 筆）`}
+                  confirmLabel={`確定上傳 ${exportable} 筆？`}
+                  pendingLabel="上傳中…"
+                  className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
+                  armedClassName="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-sky-500/20"
+                />
+              </form>
+            )}
+          </div>
           <SplitExpenseListClient
             expenses={expenses ?? []}
             shares={shares ?? []}

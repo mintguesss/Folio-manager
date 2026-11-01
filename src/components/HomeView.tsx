@@ -23,23 +23,37 @@ const STARS: [number, number, number, number][] = [
   [63, 15, 2, 1.8], [72, 78, 2, 0.3], [88, 30, 3, 2.6], [95, 62, 2, 1.1],
 ];
 
-/** 繞著轉的小星系，表情用功能的 */
-function Orbit({ emojis }: { emojis: string[] }) {
+/** 右上角的小星系：發光的核心 + 兩圈不同速度、方向的光點 */
+const ORBIT_DOTS: { ring: 0 | 1; angle: number; color: string; size: number }[] = [
+  { ring: 0, angle: 0, color: "#38bdf8", size: 8 },
+  { ring: 0, angle: 180, color: "#f472b6", size: 5 },
+  { ring: 1, angle: 60, color: "#a78bfa", size: 7 },
+  { ring: 1, angle: 200, color: "#34d399", size: 5 },
+  { ring: 1, angle: 300, color: "#fbbf24", size: 4 },
+];
+
+function Orbit() {
   return (
     <div aria-hidden className="home-orbit relative h-24 w-24 shrink-0 sm:h-32 sm:w-32">
-      <div className="absolute inset-0 rounded-full border border-dashed border-white/15" />
-      <div className="absolute inset-[30%] rounded-full bg-gradient-to-br from-sky-400 via-violet-500 to-fuchsia-500 shadow-[0_0_30px_rgba(167,139,250,0.6)]" />
-      <div className="home-orbit-ring absolute inset-0">
-        {emojis.slice(0, 4).map((e, i) => (
-          <span
-            key={i}
-            className="absolute left-1/2 top-1/2 -ml-3 -mt-3 flex h-6 w-6 items-center justify-center text-lg sm:-ml-4 sm:-mt-4 sm:h-8 sm:w-8 sm:text-xl"
-            style={{ transform: `rotate(${i * 90}deg) translateY(var(--orbit-r)) rotate(${-i * 90}deg)` }}
-          >
-            <span className="home-orbit-item">{e}</span>
-          </span>
-        ))}
-      </div>
+      <div className="home-core absolute inset-[34%] rounded-full bg-gradient-to-br from-sky-300 via-violet-500 to-fuchsia-500" />
+      {[0, 1].map((ring) => (
+        <div key={ring} className={`home-orbit-ring home-orbit-ring-${ring} absolute rounded-full border border-white/10`}>
+          {ORBIT_DOTS.filter((d) => d.ring === ring).map((d, i) => (
+            <span
+              key={i}
+              className="absolute left-1/2 top-1/2 rounded-full"
+              style={{
+                width: d.size,
+                height: d.size,
+                margin: -d.size / 2,
+                background: d.color,
+                boxShadow: `0 0 10px 2px ${d.color}`,
+                transform: `rotate(${d.angle}deg) translateY(var(--r))`,
+              }}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -144,7 +158,7 @@ export function HomeView({
         </h1>
         <p className="mt-2 text-sm text-zinc-400">{QUOTES[dayIndex % QUOTES.length]}</p>
         </div>
-        <Orbit emojis={items.map((i) => i.emoji)} />
+        <Orbit />
       </header>
 
       <div className="grid auto-rows-[minmax(8.5rem,auto)] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">

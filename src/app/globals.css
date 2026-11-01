@@ -138,12 +138,18 @@ body {
 }
 
 /* 首頁右上的小星系 */
-.home-orbit { --orbit-r: -3rem; }
-@media (min-width: 640px) { .home-orbit { --orbit-r: -4rem; } }
 @keyframes home-spin { to { rotate: 360deg; } }
-.home-orbit-ring { animation: home-spin 24s linear infinite; }
-/* 表情反向轉，保持正立 */
-.home-orbit-item { display: inline-block; animation: home-spin 24s linear infinite reverse; }
+@keyframes home-pulse {
+  0%, 100% { scale: 1;    box-shadow: 0 0 24px 4px rgba(167, 139, 250, 0.45); }
+  50%      { scale: 1.08; box-shadow: 0 0 36px 10px rgba(56, 189, 248, 0.45); }
+}
+.home-core { animation: home-pulse 4s ease-in-out infinite; }
+.home-orbit-ring-0 { inset: 18%; --r: -1.92rem; animation: home-spin 9s linear infinite; }
+.home-orbit-ring-1 { inset: 0;   --r: -3rem;    animation: home-spin 16s linear infinite reverse; border-style: dashed; }
+@media (min-width: 640px) {
+  .home-orbit-ring-0 { --r: -2.56rem; }
+  .home-orbit-ring-1 { --r: -4rem; }
+}
 
 /* 閃爍的小星星 */
 @keyframes home-twinkle {
@@ -173,7 +179,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .page-enter > * > *,
-  .home-orbit-ring, .home-orbit-item, .home-star,
+  .home-orbit-ring, .home-core, .home-star,
   .home-rise, .home-tile, .home-orb, .home-shine, .home-tile:hover .home-emoji {
     animation: none !important;
   }
