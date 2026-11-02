@@ -7,26 +7,36 @@ import { parseNotification } from "@/lib/notify-parse";
 //   body：JSON {"title": "...", "text": "..."} 或表單 title=...&text=...（也接受放在網址參數）
 // 不是付款通知的（抓不到金額）直接丟掉，不會存。
 
+/** MacroDroid 沒抓到值時會把代號原封不動送來，例如 "{notification}"，當作空的 */
+const unresolved = (v: string) => /^\{[\w=]+\}$/.test(v.trim());
+
 async function readFields(req: NextRequest): Promise<{ title: string; text: string }> {
-  const q = req.nextUrl.searchParams;
-  let title = q.get("title") ?? "";
-  let text = q.get("text") ?? "";
+  // 除了 key 以外的參數都收：title 是標題，其餘（text、big、lines…）都接成內文，
+  // 因為不同 App 的通知內容放在不同欄位
+  const fields = new Map<string, string>();
+  for (const [k, v] of req.nextUrl.searchParams) if (k !== "key") fields.set(k, v);
   const type = req.headers.get("content-type") ?? "";
   try {
     if (type.includes("application/json")) {
-      const j = await req.json();
-      title = String(j.title ?? title);
-      text = String(j.text ?? text);
+      const j = (await req.json()) as Record<string, unknown>;
+      for (const [k, v] of Object.entries(j)) if (v != null) fields.set(k, String(v));
     } else if (type.includes("form")) {
       const f = await req.formData();
-      title = String(f.get("title") ?? title);
-      text = String(f.get("text") ?? text);
+      for (const [k, v] of f) fields.set(k, String(v));
     } else {
       const raw = await req.text();
-      if (raw && !text) text = raw;
+      if (raw && !fields.has("text")) fields.set("text", raw);
     }
   } catch {}
-  return { title: title.slice(0, 200), text: text.slice(0, 2000) };
+
+  const ok = (v: string | undefined) => (v && !unresolved(v) ? v : "");
+  const title = ok(fields.get("title"));
+  const parts: string[] = [];
+  for (const [k, v] of fields) {
+    const val = ok(v).trim();
+    if (k !== "title" && val && !parts.includes(val)) parts.push(val);
+  }
+  return { title: title.slice(0, 200), text: parts.join("\n").slice(0, 2000) };
 }
 
 export async function POST(req: NextRequest) {
