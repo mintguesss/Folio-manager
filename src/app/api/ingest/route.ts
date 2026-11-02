@@ -7,8 +7,9 @@ import { parseNotification } from "@/lib/notify-parse";
 //   body：JSON {"title": "...", "text": "..."} 或表單 title=...&text=...（也接受放在網址參數）
 // 不是付款通知的（抓不到金額）直接丟掉，不會存。
 
-/** MacroDroid 沒抓到值時會把代號原封不動送來，例如 "{notification}"，當作空的 */
-const unresolved = (v: string) => /^\{[\w=]+\}$/.test(v.trim());
+/** MacroDroid 沒抓到值時會把代號原封不動送來，例如 "{notification}"，把這些拿掉。
+ *  所以手機那邊可以把好幾個代號塞在同一格，讀得到的才會留下。 */
+const stripTokens = (v: string) => v.replace(/\{[a-z_]+\}/gi, " ").replace(/[ 	]+/g, " ").trim();
 
 async function readFields(req: NextRequest): Promise<{ title: string; text: string }> {
   // 除了 key 以外的參數都收：title 是標題，其餘（text、big、lines…）都接成內文，
@@ -29,7 +30,7 @@ async function readFields(req: NextRequest): Promise<{ title: string; text: stri
     }
   } catch {}
 
-  const ok = (v: string | undefined) => (v && !unresolved(v) ? v : "");
+  const ok = (v: string | undefined) => stripTokens(v ?? "");
   const title = ok(fields.get("title"));
   const parts: string[] = [];
   for (const [k, v] of fields) {
