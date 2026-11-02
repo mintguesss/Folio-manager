@@ -51,8 +51,11 @@ function clean(s: string) {
 export function parseNotification(title: string, text: string): ParsedNotification | null {
   const body = `${title}\n${text}`;
   if (!PAY_WORDS.test(body) || SKIP_WORDS.test(body)) return null;
-  // 通知標題（傳訊息的帳號）要是銀行 / LINE Pay 官方帳號，朋友傳的聊天訊息不收
-  const account = ACCOUNT_RULES.find(([re]) => re.test(title))?.[1];
+  // 通知標題（傳訊息的帳號）要是銀行 / LINE Pay 官方帳號，朋友傳的聊天訊息不收。
+  // 官方帳號的通知有時讀不到標題，這時才改看內文開頭（例如 "LINE Pay Purchase NT$ 69"）
+  const account = title
+    ? ACCOUNT_RULES.find(([re]) => re.test(title))?.[1]
+    : ACCOUNT_RULES.find(([re]) => re.test(text.slice(0, 20)))?.[1];
   if (!account) return null;
 
   let amount: number | null = null;
