@@ -9,7 +9,7 @@ import { parseNotification } from "@/lib/notify-parse";
 
 /** MacroDroid 沒抓到值時會把代號原封不動送來，例如 "{notification}"，把這些拿掉。
  *  所以手機那邊可以把好幾個代號塞在同一格，讀得到的才會留下。 */
-const stripTokens = (v: string) => v.replace(/\{[a-z_]+\}/gi, " ").replace(/[ 	]+/g, " ").trim();
+const stripTokens = (v: string) => v.replace(/\{[a-z_]+\}/gi, " ").replace(/[ \t]+/g, " ").trim();
 
 async function readFields(req: NextRequest): Promise<{ title: string; text: string }> {
   // 除了 key 以外的參數都收：title 是標題，其餘（text、big、lines…）都接成內文，
