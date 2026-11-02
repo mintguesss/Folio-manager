@@ -8,9 +8,9 @@ export type ParsedNotification = {
 };
 
 /** 一定要有這些字才算付款通知（避免把一般聊天訊息收進來） */
-const PAY_WORDS = /(消費|刷卡|付款|支付|扣款|交易成功|交易通知|授權)/;
+const PAY_WORDS = /(消費|刷卡|付款|支付|扣款|交易成功|交易通知|授權|Purchase|Payment)/i;
 /** 退款、失敗、提醒類的不收 */
-const SKIP_WORDS = /(退款|退貨|取消|失敗|未成功|繳款截止|帳單|優惠|活動|回饋)/;
+const SKIP_WORDS = /(退款|退貨|取消|失敗|未成功|繳款截止|帳單|優惠|活動|回饋|Refund|Cancel|Failed)/i;
 
 // 有幣別標記的優先，最後才用「關鍵字後面的數字」
 const AMOUNT_PATTERNS = [
@@ -21,6 +21,8 @@ const AMOUNT_PATTERNS = [
 ];
 
 const MERCHANT_PATTERNS = [
+  // LINE Pay 英文通知：Merchant: 統一超商
+  /Merchant\s*[：:]\s*([^\n，,。]+)/i,
   /(?:商店|特店|商家|店家|消費地點|交易對象|付款對象)\s*(?:名稱)?\s*[：:]\s*([^\n，,。]+)/,
   /(?:付款給|支付給|付給)\s*[：:]?\s*([^\n，,。]+)/,
   /於\s*([^\s，,。:：]+?)\s*(?:消費|刷卡|交易|付款)/,
