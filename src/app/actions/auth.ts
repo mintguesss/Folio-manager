@@ -3,10 +3,20 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+// 登入後只能導回站內頁面：next 來自網址參數，不擋的話有人能做一條「登入後跳到釣魚網站」的連結。
+// "//evil.com" 和 "/\evil.com" 瀏覽器都會當成別的網域；空白與控制字元會被瀏覽器刪掉（"/\t/evil.com"），一併擋掉
+function safeNext(raw: FormDataEntryValue | null): string {
+  const next = String(raw ?? "");
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\") || /[\s\x00-\x1f\x7f]/.test(next)) {
+    return "/dashboard";
+  }
+  return next;
+}
+
 export async function signInWithPassword(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/dashboard");
+  const next = safeNext(formData.get("next"));
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
