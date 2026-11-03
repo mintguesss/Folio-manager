@@ -43,6 +43,8 @@ const ACCOUNT_RULES: [RegExp, string][] = [
 
 function clean(s: string) {
   return s
+    // MacroDroid 會把同一則通知的幾個欄位用空白接起來，碰到下一個「xxx :」就停
+    .replace(/\s+\S+\s*[：:].*$/, "")
     .replace(/\s*(?:NT\$|NTD|TWD|新[臺台]幣|\$|金額).*$/, "")
     .replace(/\s+/g, " ")
     .trim();
