@@ -32,7 +32,7 @@ const MERCHANT_PATTERNS = [
 
 /** 依通知來源（標題 / 內文）推測付款方式，名稱和一般記帳的選項一致 */
 const ACCOUNT_RULES: [RegExp, string][] = [
-  [/LINE\s*Pay|LINEPay/i, "LinePay"],
+  [/LINE\s*Pay|LINEPay|LINE\s*錢包/i, "LinePay"],
   [/中國信託|中信|CTBC/i, "中國信託"],
   [/華南/, "華南銀行"],
   [/國泰|CUBE/i, "國泰世華"],
