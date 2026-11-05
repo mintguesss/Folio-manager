@@ -1,118 +1,110 @@
 package app.folio.notify;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.ComponentName;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.text.TextUtils;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
-/** 設定畫面：貼網址、開通知權限、看最近送出的紀錄 */
+/** 全螢幕開網站；自己網站以外的連結交給瀏覽器 */
 public class MainActivity extends Activity {
-    private TextView status;
-    private TextView logView;
+    static final String BASE_URL = "https://folio-manager-roan.vercel.app";
+    private static final int BACKGROUND = 0xFF09090B;
+    private static final String OFFLINE_PAGE =
+            "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'>"
+                    + "<body style='margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;"
+                    + "justify-content:center;gap:16px;background:#09090b;color:#d4d4d8;font-family:sans-serif'>"
+                    + "<p>連不上網路</p><a style='color:#38bdf8' href='" + BASE_URL + "/dashboard'>重試</a>";
 
+    private WebView web;
+
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        int pad = dp(16);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad * 2, pad, pad);
+        web = new WebView(this);
+        web.setBackgroundColor(BACKGROUND);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setTextZoom(100);
+        CookieManager.getInstance().setAcceptCookie(true);
+        web.addJavascriptInterface(new AppBridge(this), "FolioApp");
+        web.setWebChromeClient(new WebChromeClient());
+        web.setDownloadListener((url, ua, disposition, mime, length) -> openExternal(Uri.parse(url)));
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if (Uri.parse(BASE_URL).getHost().equals(uri.getHost())) return false;
+                openExternal(uri);
+                return true;
+            }
 
-        TextView header = new TextView(this);
-        header.setText("Folio 自動記帳");
-        header.setTextSize(22);
-        header.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(header);
-
-        status = new TextView(this);
-        status.setPadding(0, dp(8), 0, dp(12));
-        root.addView(status);
-
-        TextView urlLabel = new TextView(this);
-        urlLabel.setText("網址（一般記帳頁「手機通知自動記帳設定」產生的那串）");
-        root.addView(urlLabel);
-
-        EditText url = new EditText(this);
-        url.setSingleLine(true);
-        url.setHint("https://…/api/ingest?key=…");
-        url.setText(Sender.url(this));
-        root.addView(url, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        Button save = new Button(this);
-        save.setText("儲存網址");
-        save.setOnClickListener(v -> {
-            String u = url.getText().toString().trim();
-            Sender.prefs(this).edit().putString("url", u).apply();
-            Toast.makeText(this, "已儲存", Toast.LENGTH_SHORT).show();
-            refresh();
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) {
+                    view.loadDataWithBaseURL(BASE_URL, OFFLINE_PAGE, "text/html", "UTF-8", null);
+                }
+            }
         });
-        root.addView(save);
 
-        Button perm = new Button(this);
-        perm.setText("開啟通知存取權");
-        perm.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
-        root.addView(perm);
-
-        Button test = new Button(this);
-        test.setText("測試連線");
-        test.setOnClickListener(v -> {
-            Sender.send(this, "測試", "Folio 測試連線");
-            Toast.makeText(this, "已送出，幾秒後看下面紀錄", Toast.LENGTH_SHORT).show();
-            v.postDelayed(this::refresh, 3000);
+        // Android 15 起畫面會延伸到狀態列和鍵盤底下，自己留出空間
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(BACKGROUND);
+        root.addView(web);
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets;
         });
-        root.addView(test);
+        setContentView(root);
 
-        TextView logLabel = new TextView(this);
-        logLabel.setText("最近紀錄");
-        logLabel.setTypeface(Typeface.DEFAULT_BOLD);
-        logLabel.setPadding(0, dp(16), 0, dp(4));
-        root.addView(logLabel);
+        if (savedInstanceState != null) web.restoreState(savedInstanceState);
+        else web.loadUrl(BASE_URL + "/dashboard");
+    }
 
-        logView = new TextView(this);
-        logView.setTextSize(12);
-        logView.setTextIsSelectable(true);
-        root.addView(logView);
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(root);
-        setContentView(scroll);
+    private void openExternal(Uri uri) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (ActivityNotFoundException ignored) {
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refresh();
+        web.onResume();
+        // 從系統設定回來時，讓網站重新讀權限狀態
+        web.evaluateJavascript("window.dispatchEvent(new Event('folio-app-state'))", null);
     }
 
-    private void refresh() {
-        boolean granted = hasAccess();
-        boolean hasUrl = !Sender.url(this).isEmpty();
-        String s = (granted ? "✅ 通知存取權已開啟" : "❌ 還沒開通知存取權") + "\n"
-                + (hasUrl ? "✅ 網址已設定" : "❌ 還沒設定網址");
-        status.setText(s);
-        String log = Sender.prefs(this).getString("log", "");
-        logView.setText(log.isEmpty() ? "（還沒有紀錄）" : log);
+    @Override
+    protected void onPause() {
+        web.onPause();
+        CookieManager.getInstance().flush();
+        super.onPause();
     }
 
-    private boolean hasAccess() {
-        String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        if (TextUtils.isEmpty(flat)) return false;
-        String me = new ComponentName(this, NotifyService.class).flattenToString();
-        return flat.contains(me);
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        web.saveState(outState);
     }
 
-    private int dp(int v) {
-        return Math.round(v * getResources().getDisplayMetrics().density);
+    @Override
+    public void onBackPressed() {
+        if (web.canGoBack()) web.goBack();
+        else super.onBackPressed();
     }
 }

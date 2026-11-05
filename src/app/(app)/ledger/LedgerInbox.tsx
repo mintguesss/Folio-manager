@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState, useSyncExternalStore, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { Combobox } from "@/components/Combobox";
 import { acceptInboxItem, acceptKnownInbox, createIngestToken, ignoreInboxItem } from "@/app/actions/ledger";
@@ -112,96 +112,116 @@ function AcceptKnownButton({ count }: { count: number }) {
   );
 }
 
-function SetupPanel({ hasToken }: { hasToken: boolean }) {
-  const [token, setToken] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const url = token && typeof window !== "undefined" ? `${window.location.origin}/api/ingest?key=${token}` : "";
+/** App 外殼提供的介面（只有 Android App 裡才有） */
+type FolioAppBridge = {
+  getState(): string;
+  setKey(key: string): void;
+  setEnabled(enabled: boolean): void;
+  openAccessSettings(): void;
+  getLog(): string;
+};
+type AppState = { access: boolean; enabled: boolean; configured: boolean };
 
-  async function generate() {
-    setBusy(true);
-    const r = await createIngestToken();
-    setBusy(false);
-    if (r.ok) setToken(r.token);
+const appBridge = () => (window as unknown as { FolioApp?: FolioAppBridge }).FolioApp;
+
+function subscribeApp(onChange: () => void) {
+  window.addEventListener("folio-app-state", onChange);
+  return () => window.removeEventListener("folio-app-state", onChange);
+}
+
+function AutoLedgerPanel() {
+  // 回傳字串才能比對有沒有變；空字串代表不在 App 裡
+  const raw = useSyncExternalStore(subscribeApp, () => appBridge()?.getState() ?? "", () => "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [log, setLog] = useState<string | null>(null);
+
+  if (!raw) {
+    return <p className="px-1 text-xs text-zinc-500">📱 付款通知自動記帳只有 Android App 支援，iPhone 和電腦用不了。</p>;
+  }
+
+  const state = JSON.parse(raw) as AppState;
+  const on = state.enabled && state.configured;
+  const refresh = () => window.dispatchEvent(new Event("folio-app-state"));
+
+  async function toggle() {
+    const app = appBridge();
+    if (!app) return;
+    setError("");
+    if (on) {
+      app.setEnabled(false);
+      refresh();
+      return;
+    }
+    if (!state.configured) {
+      setBusy(true);
+      const r = await createIngestToken();
+      setBusy(false);
+      if (!r.ok) {
+        setError("開啟失敗，請再試一次。");
+        return;
+      }
+      app.setKey(r.token);
+    }
+    app.setEnabled(true);
+    refresh();
+    if (!state.access) app.openAccessSettings();
   }
 
   return (
-    <details className="group rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
-        📱 手機通知自動記帳設定
-        {hasToken && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">已設定</span>}
-        <svg className="ml-auto h-4 w-4 text-zinc-500 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </summary>
-
-      <div className="mt-4 space-y-4 text-sm text-zinc-300">
-        <div>
-          <p className="font-medium text-zinc-200">1. 產生手機專用網址</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            網址裡有金鑰，只能用來「送通知進待確認區」，看不到你的帳。重新產生後舊的立刻失效。
-          </p>
-          <button
-            type="button"
-            onClick={generate}
-            disabled={busy}
-            className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-100 hover:bg-white/10 disabled:opacity-60"
-          >
-            {busy ? "產生中…" : hasToken ? "重新產生" : "產生"}
-          </button>
-          {url && (
-            <div className="mt-2 space-y-1.5">
-              <p className="break-all rounded-lg bg-black/40 p-2 font-mono text-[11px] text-sky-300">{url}</p>
-              <button
-                type="button"
-                onClick={async () => {
-                  try { await navigator.clipboard.writeText(url); setCopied(true); } catch {}
-                }}
-                className="text-xs text-sky-400 hover:underline"
-              >
-                {copied ? "已複製 ✓" : "複製網址"}
-              </button>
-              <p className="text-xs text-amber-300/80">這個網址只會顯示這一次，先貼到 MacroDroid。</p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <p className="font-medium text-zinc-200">2. 在 Android 裝 MacroDroid，新增一個巨集</p>
-          <ul className="mt-1 space-y-1 text-xs text-zinc-400">
-            <li>• <b className="text-zinc-300">觸發條件</b>：通知 → 已收到通知 → 應用程式選 LINE（要記 LINE Pay App 的也一起勾）</li>
-            <li>• 文字內容可設「包含」：<code className="text-zinc-300">消費|刷卡|付款|支付|扣款</code>（勾正規表達式），只轉帳務通知</li>
-            <li>• <b className="text-zinc-300">動作</b>：連線 → HTTP 請求 → 方法 POST，網址貼上面那串</li>
-            <li>• 內容類型選 <code className="text-zinc-300">application/x-www-form-urlencoded</code>，加兩個參數：</li>
-            <li className="pl-3">
-              <code className="text-zinc-300">title</code> = <code className="text-sky-300">[notification_title]</code>、
-              <code className="text-zinc-300">text</code> = <code className="text-sky-300">[notification]</code>
-            </li>
-            <li>• 第一次會要你開「通知存取權」，允許就好</li>
-          </ul>
-        </div>
-
-        <div>
-          <p className="font-medium text-zinc-200">3. 之後</p>
-          <p className="mt-1 text-xs text-zinc-400">
-            刷卡 / LINE Pay 的通知會自動出現在上面的「待確認」。選好類別按入帳，這家店之後就會自動帶入類別；
-            認得的店家可以一次全部入帳。抓不到金額的訊息（一般聊天）會直接丟掉，不會存。
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-white">📱 付款通知自動記帳</p>
+          <p className="mt-0.5 text-xs text-zinc-400">
+            {!on ? "已關閉，不會送出任何通知。" : state.access ? "自動記帳中，付款通知會進「待確認」。" : "還差通知存取權才會開始。"}
           </p>
         </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="付款通知自動記帳"
+          disabled={busy}
+          onClick={toggle}
+          className={["relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60", on ? "bg-sky-500" : "bg-white/15"].join(" ")}
+        >
+          <span className={["absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white transition-transform", on ? "translate-x-5" : ""].join(" ")} />
+        </button>
       </div>
-    </details>
+      {on && !state.access && (
+        <button
+          type="button"
+          onClick={() => appBridge()?.openAccessSettings()}
+          className="mt-3 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25"
+        >
+          開啟通知存取權
+        </button>
+      )}
+      {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
+      <button
+        type="button"
+        onClick={() => setLog(log === null ? (appBridge()?.getLog() ?? "") : null)}
+        className="mt-3 block text-xs text-zinc-500 hover:text-zinc-300"
+      >
+        {log === null ? "看最近紀錄" : "收起紀錄"}
+      </button>
+      {log !== null && (
+        <p className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-black/30 p-2 text-[11px] text-zinc-400">
+          {log || "還沒有紀錄。"}
+        </p>
+      )}
+    </div>
   );
 }
 
 export function LedgerInbox({
   items,
   rules,
-  hasToken,
   usedCategories,
 }: {
   items: InboxItem[];
   rules: MerchantRule[];
-  hasToken: boolean;
   usedCategories: string[];
 }) {
   const ruleMap = new Map(rules.map((r) => [r.merchant, r]));
@@ -228,7 +248,7 @@ export function LedgerInbox({
           </div>
         </div>
       )}
-      <SetupPanel hasToken={hasToken} />
+      <AutoLedgerPanel />
     </div>
   );
 }

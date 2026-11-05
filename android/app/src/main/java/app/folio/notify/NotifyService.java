@@ -32,7 +32,7 @@ public class NotifyService extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn.getPackageName().equals(getPackageName())) return;
+        if (sbn.getPackageName().equals(getPackageName()) || !Sender.enabled(this)) return;
         Notification n = sbn.getNotification();
         if ((n.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
 
@@ -67,7 +67,7 @@ public class NotifyService extends NotificationListenerService {
             if (last != null && now - last < 10 * 60_000) return;
             recent.put(sig, now);
         }
-        Sender.send(this, title, text);
+        Sender.send(this, title, text, sbn.getPackageName());
     }
 
     private static String str(CharSequence cs) {

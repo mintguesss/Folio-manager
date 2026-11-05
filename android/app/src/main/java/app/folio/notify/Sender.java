@@ -29,32 +29,37 @@ final class Sender {
         return prefs(c).getString("url", "");
     }
 
-    static void send(Context c, String title, String text) {
+    /** 自動記帳開關，預設開啟 */
+    static boolean enabled(Context c) {
+        return prefs(c).getBoolean("enabled", true);
+    }
+
+    static void send(Context c, String title, String text, String pkg) {
         final Context app = c.getApplicationContext();
         final String target = url(app);
         if (target.isEmpty()) {
-            log(app, "還沒設定網址，略過：" + title);
             return;
         }
         POOL.execute(() -> {
             String result;
             try {
-                result = post(target, title, text);
+                result = post(target, title, text, pkg);
             } catch (Exception e) {
                 // 網路不通時等 20 秒再試一次
                 try {
                     Thread.sleep(20_000);
-                    result = post(target, title, text);
+                    result = post(target, title, text, pkg);
                 } catch (Exception e2) {
                     result = "送出失敗：" + e2.getMessage();
                 }
             }
-            log(app, title + "｜" + oneLine(text) + "\n  → " + result);
+            log(app, "[" + pkg + "] " + title + "｜" + oneLine(text) + "\n  → " + result);
         });
     }
 
-    private static String post(String target, String title, String text) throws Exception {
-        String body = "title=" + URLEncoder.encode(title, "UTF-8") + "&text=" + URLEncoder.encode(text, "UTF-8");
+    private static String post(String target, String title, String text, String pkg) throws Exception {
+        String body = "title=" + URLEncoder.encode(title, "UTF-8") + "&text=" + URLEncoder.encode(text, "UTF-8")
+                + "&pkg=" + URLEncoder.encode(pkg, "UTF-8");
         HttpURLConnection conn = (HttpURLConnection) new URL(target).openConnection();
         conn.setRequestMethod("POST");
         conn.setConnectTimeout(15_000);

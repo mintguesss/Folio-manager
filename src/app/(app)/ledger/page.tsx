@@ -8,7 +8,7 @@ export default async function LedgerPage() {
   const user = await getUser();
   const uid = user?.id ?? "";
 
-  const [{ data: entries }, { data: inbox }, { data: rules }, { count: tokenCount }] = await Promise.all([
+  const [{ data: entries }, { data: inbox }, { data: rules }] = await Promise.all([
     supabase
       .from("ledger_entries")
       .select("id,occurred_on,entry_type,amount,account,category_text,counterparty,memo,created_at")
@@ -23,7 +23,6 @@ export default async function LedgerPage() {
       .order("received_at", { ascending: false })
       .limit(100),
     supabase.from("ledger_merchant_rules").select("merchant,category_text,account").eq("user_id", uid),
-    supabase.from("ingest_tokens").select("user_id", { count: "exact", head: true }).eq("user_id", uid),
   ]);
 
   const usedCategories = Array.from(
@@ -40,7 +39,6 @@ export default async function LedgerPage() {
       <LedgerInbox
         items={inbox ?? []}
         rules={rules ?? []}
-        hasToken={(tokenCount ?? 0) > 0}
         usedCategories={usedCategories}
       />
 

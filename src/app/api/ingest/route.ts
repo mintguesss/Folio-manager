@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { parseNotification } from "@/lib/notify-parse";
 
-// 手機（MacroDroid）收到付款通知時 POST 過來：
+// 手機 App 收到付款通知時 POST 過來：
 //   POST /api/ingest?key=<金鑰>
 //   body：JSON {"title": "...", "text": "..."} 或表單 title=...&text=...（也接受放在網址參數）
 // 不是付款通知的（抓不到金額）直接丟掉，不會存。
@@ -11,7 +11,7 @@ import { parseNotification } from "@/lib/notify-parse";
  *  所以手機那邊可以把好幾個代號塞在同一格，讀得到的才會留下。 */
 const stripTokens = (v: string) => v.replace(/\{[a-z_]+\}/gi, " ").replace(/[ \t]+/g, " ").trim();
 
-async function readFields(req: NextRequest): Promise<{ title: string; text: string }> {
+async function readFields(req: NextRequest): Promise<{ title: string; text: string; pkg: string }> {
   // 除了 key 以外的參數都收：title 是標題，其餘（text、big、lines…）都接成內文，
   // 因為不同 App 的通知內容放在不同欄位
   const fields = new Map<string, string>();
@@ -35,9 +35,9 @@ async function readFields(req: NextRequest): Promise<{ title: string; text: stri
   const parts: string[] = [];
   for (const [k, v] of fields) {
     const val = ok(v).trim();
-    if (k !== "title" && val && !parts.includes(val)) parts.push(val);
+    if (k !== "title" && k !== "pkg" && val && !parts.includes(val)) parts.push(val);
   }
-  return { title: title.slice(0, 200), text: parts.join("\n").slice(0, 2000) };
+  return { title: title.slice(0, 200), text: parts.join("\n").slice(0, 2000), pkg: fields.get("pkg") ?? "" };
 }
 
 export async function POST(req: NextRequest) {
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     "";
   if (key.length < 20) return NextResponse.json({ ok: false, error: "missing key" }, { status: 401 });
 
-  const { title, text } = await readFields(req);
-  const parsed = parseNotification(title, text);
+  const { title, text, pkg } = await readFields(req);
+  const parsed = parseNotification(title, text, pkg);
   // 回傳收到的內容，方便在手機上看為什麼被跳過
   if (!parsed) return NextResponse.json({ ok: true, skipped: true, got: { title, text } });
 
