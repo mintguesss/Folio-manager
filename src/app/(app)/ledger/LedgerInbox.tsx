@@ -137,7 +137,21 @@ function AutoLedgerPanel() {
   const [log, setLog] = useState<string | null>(null);
 
   if (!raw) {
-    return <p className="px-1 text-xs text-zinc-500">📱 付款通知自動記帳只有 Android App 支援，iPhone 和電腦用不了。</p>;
+    return (
+      <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+        <p className="text-sm font-semibold text-white">📱 付款通知自動記帳</p>
+        <p className="mt-0.5 text-xs text-zinc-400">
+          只有 Android App 支援，iPhone 和電腦用不了。裝好後開啟 App、登入，開關會出現在這裡。
+        </p>
+        <a
+          href="/Folio.apk"
+          download
+          className="mt-3 inline-block rounded-lg bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white"
+        >
+          下載 Android App
+        </a>
+      </div>
+    );
   }
 
   const state = JSON.parse(raw) as AppState;

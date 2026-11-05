@@ -12,6 +12,7 @@ function isPublicPath(pathname: string) {
     pathname === "/api/ingest" ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
+    pathname === "/Folio.apk" ||
     pathname.startsWith("/workbox-")
   );
 }
