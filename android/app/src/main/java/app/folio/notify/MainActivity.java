@@ -5,7 +5,9 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -66,7 +68,10 @@ public class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
-            return insets;
+            // 這裡留過就不再往下傳，否則網頁的 safe-area-inset 會再留一次，頂部多一塊空白
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? WindowInsets.CONSUMED
+                    : insets.consumeSystemWindowInsets();
         });
         setContentView(root);
 
