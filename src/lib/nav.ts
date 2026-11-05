@@ -21,4 +21,5 @@ export const TRIP_NAV: NavItem = { href: "/trip", label: "行程", emoji: "🗺�
 export const MORE_NAV: NavItem[] = [
   { href: "/networth", label: "資產記帳", emoji: "💰", desc: "資產快照、淨值走勢", accent: "#2dd4bf" },
   { href: "/spending", label: "統計", emoji: "📊", desc: "每趟出國花了多少", accent: "#f472b6" },
+  { href: "/auto-ledger", label: "自動記帳", emoji: "📱", desc: "付款通知自動進待確認", accent: "#60a5fa" },
 ];
