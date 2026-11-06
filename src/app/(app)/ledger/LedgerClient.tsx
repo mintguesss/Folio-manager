@@ -5,6 +5,7 @@ import { LedgerChart } from "@/components/LedgerChart";
 import { LedgerCategoryChart } from "@/components/LedgerCategoryChart";
 import { LedgerEntryForm } from "./LedgerEntryForm";
 import { LedgerRecordList } from "./LedgerRecordList";
+import { QuickEntry } from "./QuickEntry";
 import type { LedgerEntry } from "./LedgerRecordList";
 
 type ActionResult = { ok: true; message: string } | { ok: false; message: string } | undefined;
@@ -52,7 +53,8 @@ export function LedgerClient({
   return (
     <>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
-        <div className="xl:col-span-1">
+        <div className="space-y-3 xl:col-span-1">
+          <QuickEntry entries={entries} createAction={createAction} />
           <LedgerEntryForm onCreate={createAction} />
         </div>
 
