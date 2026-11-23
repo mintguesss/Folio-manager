@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { computePositions, type ComputedPosition } from "@/lib/position-calc";
+import { ownerOf } from "@/lib/owners";
 import { StockCostAccordion, type StockPosition } from "@/components/StockCostAccordion";
 import { BackfillFxButton } from "@/components/BackfillFxButton";
 
@@ -18,7 +19,7 @@ export default async function CostPage({
   const [{ data: tradesRaw }, { data: quotesRaw }] = await Promise.all([
     supabase
       .from("stock_trades")
-      .select("id,market,symbol,name,side,quantity,price,fee,tax,currency,trade_date,fx_rate")
+      .select("id,market,symbol,name,side,quantity,price,fee,tax,currency,trade_date,fx_rate,note")
       .eq("user_id", user?.id ?? "")
       .eq("market", marketFilter)
       .order("trade_date", { ascending: true })
@@ -51,6 +52,7 @@ export default async function CostPage({
       fee: Number(t.fee ?? 0), tax: Number(t.tax ?? 0),
       currency: t.currency, trade_date: t.trade_date,
       fx_rate: t.fx_rate != null ? Number(t.fx_rate) : null,
+      owner: ownerOf(t.note),
     }))
   );
 
@@ -62,7 +64,7 @@ export default async function CostPage({
     const unrealizedPct = unrealized != null && s.avgCost > 0
       ? (unrealized / (s.avgCost * s.quantity)) * 100 : null;
     return {
-      symbol: s.symbol, name: s.name, currency: s.currency,
+      symbol: s.symbol, owner: s.owner, name: s.name, currency: s.currency,
       trades: s.trades,
       finalQty: s.quantity, finalAvg: s.avgCost, realizedPnl: s.realizedPnl,
       realizedPnlTWD: marketFilter === "US" && s.realizedCostTWD > 0 ? s.realizedPnlTWD : null,

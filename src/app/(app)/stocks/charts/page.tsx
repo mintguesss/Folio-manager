@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ownerOf } from "@/lib/owners";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { fetchUSDTWD } from "@/lib/stock-utils";
 import { StockChartsPanel, type StockChartData } from "@/components/StockChartsPanel";
@@ -34,7 +35,7 @@ export default async function StockChartsPage() {
     fetchUSDTWD(),
     supabase
       .from("stock_trades")
-      .select("market,symbol,side,quantity,price,fee,tax,currency,trade_date")
+      .select("market,symbol,side,quantity,price,fee,tax,currency,trade_date,note")
       .eq("user_id", user?.id ?? "")
       .order("trade_date", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -45,7 +46,8 @@ export default async function StockChartsPage() {
       .order("quote_date", { ascending: true }),
   ]);
 
-  const trades: Trade[] = (tradesRaw ?? []).map((t) => ({
+  // 幫別人買的不算進自己的圖表
+  const trades: Trade[] = (tradesRaw ?? []).filter((t) => !ownerOf(t.note)).map((t) => ({
     market: t.market as "TW" | "US",
     symbol: t.symbol,
     side: t.side as "BUY" | "SELL",

@@ -11,6 +11,7 @@ import {
   type MarketChartData,
 } from "@/components/MarketChartsPanel";
 import { computePositions } from "@/lib/position-calc";
+import { ownerOf } from "@/lib/owners";
 import { BackfillFxButton } from "@/components/BackfillFxButton";
 import { StockCostAccordion, type StockPosition } from "@/components/StockCostAccordion";
 import { SyncQuotesButton } from "@/components/SyncQuotesButton";
@@ -27,6 +28,7 @@ type Trade = {
   currency: string;
   trade_date: string;
   fx_rate: number | null;
+  owner: string | null;
 };
 
 type Quote = {
@@ -50,6 +52,10 @@ function fmtPct(n: number) {
   return n > 0 ? "+" + s : n < 0 ? "-" + s : s;
 }
 function key(m: string, s: string) { return `${m}:${s}`; }
+
+function ownerBadge(owner: string | null) {
+  return owner ? <span className="ml-1.5 rounded bg-amber-500/15 px-1.5 py-0.5 align-middle text-[10px] font-normal text-amber-300">{owner}</span> : null;
+}
 function pnlColor(n: number) { return n >= 0 ? "text-emerald-300" : "text-rose-300"; }
 
 function StatCard({
@@ -96,7 +102,7 @@ export default async function PositionsPage({
     fetchUSDTWD(),
     supabase
       .from("stock_trades")
-      .select("market,symbol,name,side,quantity,price,fee,tax,currency,trade_date,fx_rate")
+      .select("market,symbol,name,side,quantity,price,fee,tax,currency,trade_date,fx_rate,note")
       .eq("user_id", user?.id ?? "")
       .order("trade_date", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -120,6 +126,7 @@ export default async function PositionsPage({
     currency: String(t.currency ?? ""),
     trade_date: t.trade_date,
     fx_rate: t.fx_rate != null ? Number(t.fx_rate) : null,
+    owner: ownerOf(t.note),
   }));
 
   // Whether any US trades are missing fx_rate (need backfill)
@@ -170,6 +177,7 @@ export default async function PositionsPage({
   const tw = emptyStats(), us = emptyStats();
 
   for (const p of allRows) {
+    if (p.owner) continue; // 別人的不算進自己的總計
     const isUS = p.market === "US";
     const fx = isUS ? usdtwd : 1;
     const s = isUS ? us : tw;
@@ -248,7 +256,7 @@ export default async function PositionsPage({
   const pnlLine = marketQuoteDates.map((date) => {
     while (tradeIdx < trades.length && trades[tradeIdx].trade_date <= date) {
       const t = trades[tradeIdx];
-      if (t.market === marketFilter) {
+      if (t.market === marketFilter && !t.owner) {
         const k = key(t.market, t.symbol);
         const tradeFx = marketFilter === "US" && t.fx_rate != null ? t.fx_rate : fxLine;
         if (t.side === "BUY") {
@@ -272,13 +280,14 @@ export default async function PositionsPage({
   const chartLabel = (p: { market: string; symbol: string; name: string | null }) =>
     p.market === "TW" ? (p.name ?? p.symbol) : p.symbol;
 
-  const pie = allRows.filter((p) => p.market === marketFilter && p.quantity > 0)
+  const mine = allRows.filter((p) => !p.owner);
+  const pie = mine.filter((p) => p.market === marketFilter && p.quantity > 0)
     .flatMap((p) => {
       const q = latestQuote.get(key(p.market, p.symbol));
       return q ? [{ name: chartLabel(p), value: Math.round(q.close * p.quantity) }] : [];
     }).sort((a, b) => b.value - a.value);
   // Per-stock P&L line: walk historical quotes + FIFO running avg for each stock
-  const stockPnlLines = allRows
+  const stockPnlLines = mine
     .filter((p) => p.market === marketFilter && p.quantity > 0)
     .flatMap((p) => {
       const k = key(p.market, p.symbol);
@@ -302,7 +311,7 @@ export default async function PositionsPage({
       return line.length > 0 ? [{ symbol: p.symbol, name: p.name, line }] : [];
     });
 
-  const returnBar = allRows.filter((p) => p.market === marketFilter && p.quantity > 0 && p.avgCost > 0)
+  const returnBar = mine.filter((p) => p.market === marketFilter && p.quantity > 0 && p.avgCost > 0)
     .flatMap((p) => {
       const q = latestQuote.get(key(p.market, p.symbol));
       if (!q) return [];
@@ -312,7 +321,7 @@ export default async function PositionsPage({
     }).sort((a, b) => b.pct - a.pct);
   const marketChartData: MarketChartData = { pie, stockPnlLines, pnlLine, returnBar };
 
-  const stockLines = allRows
+  const stockLines = mine
     .filter((p) => p.market === marketFilter)
     .flatMap((p) => {
       const k = key(p.market, p.symbol);
@@ -377,7 +386,7 @@ export default async function PositionsPage({
 
   // Display rows
   const heldRows = allRows.filter((p) => p.market === marketFilter && p.quantity > 0)
-    .sort((a, b) => a.symbol.localeCompare(b.symbol));
+    .sort((a, b) => a.symbol.localeCompare(b.symbol) || (a.owner ? 1 : 0) - (b.owner ? 1 : 0));
   const realizedRows = allRows.filter((p) => p.market === marketFilter && (p.realizedPnl !== 0 || p.quantity < 0))
     .sort((a, b) => b.realizedPnl - a.realizedPnl);
 
@@ -394,7 +403,7 @@ export default async function PositionsPage({
         : unrealized * usdtwd
       : null;
     return {
-      symbol: p.symbol, name: p.name, currency: p.currency,
+      symbol: p.symbol, owner: p.owner, name: p.name, currency: p.currency,
       trades: p.trades,
       finalQty: p.quantity, finalAvg: p.avgCost, realizedPnl: p.realizedPnl,
       realizedCost: p.realizedCost,
@@ -539,20 +548,20 @@ export default async function PositionsPage({
                     ? (dayChg / prevClose!) * 100 : null;
                   const todayPnl = dayChg != null ? dayChg * p.quantity : null;
                   return (
-                    <tr key={key(p.market, p.symbol)}
+                    <tr key={`${key(p.market, p.symbol)}:${p.owner ?? ""}`}
                       className="border-t border-white/5 hover:bg-white/[0.02]">
                       {/* 股票 */}
                       <td className="px-3 py-2 font-medium text-white">
                         {p.market === "TW" ? (
                           <>
                             <div className={p.name && p.name.length > 4 ? "whitespace-normal" : "whitespace-nowrap"}>
-                              {p.name ?? p.symbol}
+                              {p.name ?? p.symbol}{ownerBadge(p.owner)}
                             </div>
                             {p.name && <div className="hidden text-xs font-normal text-zinc-500 sm:block">{p.symbol}</div>}
                           </>
                         ) : (
                           <>
-                            <div className="whitespace-nowrap">{p.symbol}</div>
+                            <div className="whitespace-nowrap">{p.symbol}{ownerBadge(p.owner)}</div>
                             {p.name && <div className="hidden whitespace-nowrap text-xs font-normal text-zinc-500 sm:block">{p.name}</div>}
                           </>
                         )}

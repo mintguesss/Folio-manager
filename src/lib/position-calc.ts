@@ -10,6 +10,8 @@ export type TradeInput = {
   currency: string;
   trade_date: string;
   fx_rate?: number | null; // USD/TWD at trade time (US only)
+  /** 幫別人買的（見 owners.ts），持股分開算 */
+  owner?: string | null;
 };
 
 export type ComputedTrade = {
@@ -40,6 +42,7 @@ export type ComputedPosition = {
   costBasisTWD: number;
   realizedPnlTWD: number;
   realizedCostTWD: number;
+  owner: string | null;
 };
 
 type Lot = { quantity: number; costPerShare: number; costPerShareTWD: number };
@@ -57,12 +60,13 @@ export function computePositions(trades: TradeInput[]): Map<string, ComputedPosi
   let idx = 0;
 
   for (const t of trades) {
-    const k = `${t.market}:${t.symbol}`;
+    const k = `${t.market}:${t.symbol}:${t.owner ?? ""}`;
     const pos: ComputedPosition = posMap.get(k) ?? {
       market: t.market, symbol: t.symbol, name: t.name,
       currency: t.currency, quantity: 0, avgCost: 0,
       realizedPnl: 0, realizedCost: 0, trades: [],
       costBasisTWD: 0, realizedPnlTWD: 0, realizedCostTWD: 0,
+      owner: t.owner ?? null,
     };
     pos.name = t.name ?? pos.name;
     pos.currency = t.currency;

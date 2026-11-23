@@ -26,6 +26,8 @@ export type TradeRow = {
 
 export type StockPosition = {
   symbol: string;
+  /** 幫別人買的 */
+  owner?: string | null;
   name: string | null;
   currency: string;
   trades: TradeRow[];
@@ -39,6 +41,8 @@ export type StockPosition = {
   unrealizedTWD?: number | null;
   unrealizedPct: number | null;
 };
+
+const posId = (p: StockPosition) => (p.owner ? `${p.symbol}:${p.owner}` : p.symbol);
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -182,6 +186,7 @@ function PositionCard({ pos, open, onToggle, dim }: {
                 )}
               </>
             )}
+            {pos.owner && <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-300">{pos.owner}</span>}
             {dim && <span className="rounded bg-white/5 px-1.5 py-0.5 text-xs text-zinc-400">已出清</span>}
           </div>
           <div className={["mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs", labelCls].join(" ")}>
@@ -281,8 +286,8 @@ export function StockCostAccordion({
   }
 
   const allKeys = [
-    ...heldPositions.map((p) => p.symbol),
-    ...closedPositions.map((p) => `closed:${p.symbol}`),
+    ...heldPositions.map(posId),
+    ...closedPositions.map((p) => `closed:${posId(p)}`),
   ];
   const allOpen = allKeys.every((k) => openSet.has(k));
 
@@ -315,10 +320,10 @@ export function StockCostAccordion({
         <div className="space-y-2">
           {heldPositions.map((pos) => (
             <PositionCard
-              key={pos.symbol}
+              key={posId(pos)}
               pos={pos}
-              open={openSet.has(pos.symbol)}
-              onToggle={() => toggle(pos.symbol)}
+              open={openSet.has(posId(pos))}
+              onToggle={() => toggle(posId(pos))}
             />
           ))}
         </div>
@@ -330,10 +335,10 @@ export function StockCostAccordion({
           <div className="space-y-2">
             {closedPositions.map((pos) => (
               <PositionCard
-                key={pos.symbol}
+                key={posId(pos)}
                 pos={pos}
-                open={openSet.has(`closed:${pos.symbol}`)}
-                onToggle={() => toggle(`closed:${pos.symbol}`)}
+                open={openSet.has(`closed:${posId(pos)}`)}
+                onToggle={() => toggle(`closed:${posId(pos)}`)}
                 dim
               />
             ))}
